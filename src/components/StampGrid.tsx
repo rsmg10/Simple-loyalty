@@ -18,7 +18,7 @@ export default function StampGrid({
       aria-label={`${stampsEarned} of ${stampsRequired} stamps earned`}
     >
       {stamps.map((filled, i) => (
-        <StampMark key={i} filled={filled} />
+        <StampMark key={i} filled={filled} index={i} />
       ))}
     </div>
   );

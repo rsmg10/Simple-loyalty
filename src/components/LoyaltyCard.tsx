@@ -1,5 +1,8 @@
 import CardQRCode from "./CardQRCode";
+import Confetti from "./Confetti";
+import ProgressBar from "./ProgressBar";
 import StampGrid from "./StampGrid";
+import { getEncouragementCopy } from "@/lib/gamification";
 
 type Shop = {
   name: string;
@@ -14,15 +17,28 @@ type LoyaltyCardProps = {
   shop: Shop;
   card: Card;
   cardId: string;
+  justRedeemed?: boolean;
 };
 
-export default function LoyaltyCard({ shop, card, cardId }: LoyaltyCardProps) {
+export default function LoyaltyCard({
+  shop,
+  card,
+  cardId,
+  justRedeemed = false,
+}: LoyaltyCardProps) {
   const { stampsEarned, stampsRequired } = card;
-  const stampsRemaining = Math.max(stampsRequired - stampsEarned, 0);
-  const isComplete = stampsRemaining === 0;
 
   return (
-    <div className="w-full max-w-sm rounded-xl bg-surface-card p-lg sm:p-xl">
+    <div className="relative w-full max-w-sm overflow-hidden rounded-xl bg-surface-card p-lg sm:p-xl">
+      {justRedeemed && (
+        <>
+          <Confetti />
+          <div className="animate-celebrate-in absolute inset-x-lg top-lg rounded-md bg-primary px-md py-xs text-center text-caption font-semibold text-on-primary">
+            🎉 Free coffee earned!
+          </div>
+        </>
+      )}
+
       <p className="text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted-soft">
         Digital Stamp Card
       </p>
@@ -40,10 +56,12 @@ export default function LoyaltyCard({ shop, card, cardId }: LoyaltyCardProps) {
         </span>
       </div>
 
-      <p className="mt-xs text-body-sm text-muted">
-        {isComplete
-          ? "Card complete — your next coffee is on us!"
-          : `${stampsRemaining} more stamp${stampsRemaining === 1 ? "" : "s"} until your next coffee is free.`}
+      <div className="mt-xs">
+        <ProgressBar stampsEarned={stampsEarned} stampsRequired={stampsRequired} />
+      </div>
+
+      <p className="mt-sm text-body-sm text-muted">
+        {getEncouragementCopy(stampsEarned, stampsRequired)}
       </p>
 
       <div className="mt-lg border-t border-hairline pt-lg">

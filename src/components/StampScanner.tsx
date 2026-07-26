@@ -2,6 +2,7 @@
 
 import jsQR from "jsqr";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import Confetti from "./Confetti";
 import { addStamp, getCard, type CardRecord } from "@/lib/card-store";
 
 type ScanState =
@@ -102,7 +103,9 @@ export default function StampScanner() {
   }
 
   return (
-    <div className="w-full max-w-sm rounded-lg border border-hairline bg-canvas p-xl">
+    <div className="relative w-full max-w-sm overflow-hidden rounded-lg border border-hairline bg-canvas p-xl">
+      {state.status === "success" && state.redeemed && <Confetti />}
+
       <p className="text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted-soft">
         Staff Scan
       </p>
@@ -186,7 +189,24 @@ export default function StampScanner() {
 
       {state.status === "success" && (
         <>
-          <h1 className="mt-xxs text-display-sm font-medium tracking-display-sm text-ink">
+          <div className="animate-stamp-enter mt-xxs flex h-11 w-11 items-center justify-center rounded-full bg-primary">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M4 10.5L8 14.5L16 5.5"
+                stroke="#fffaf0"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <h1 className="mt-sm text-display-sm font-medium tracking-display-sm text-ink">
             {state.redeemed ? "Free coffee redeemed!" : "Stamp added"}
           </h1>
           <p className="mt-xs font-mono text-title-lg font-semibold tabular-nums text-ink">
