@@ -1,5 +1,6 @@
 import CardQRCode from "./CardQRCode";
 import Confetti from "./Confetti";
+import EmailReminderOptIn from "./EmailReminderOptIn";
 import ProgressBar from "./ProgressBar";
 import StampGrid from "./StampGrid";
 import { getEncouragementCopy } from "@/lib/gamification";
@@ -11,6 +12,7 @@ type Shop = {
 type Card = {
   stampsEarned: number;
   stampsRequired: number;
+  email?: string;
 };
 
 type LoyaltyCardProps = {
@@ -63,6 +65,10 @@ export default function LoyaltyCard({
       <p className="mt-sm text-body-sm text-muted">
         {getEncouragementCopy(stampsEarned, stampsRequired)}
       </p>
+
+      <div className="mt-md">
+        <EmailReminderOptIn cardId={cardId} email={card.email} />
+      </div>
 
       <div className="mt-lg border-t border-hairline pt-lg">
         <p className="text-center text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted-soft">

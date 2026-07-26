@@ -8,11 +8,13 @@ const CARD_STORE_EVENT = "cardstore:update";
 
 const DEFAULT_STAMPS_REQUIRED = 9;
 const DEMO_SEED_STAMPS_EARNED = 6;
+const SHOP_NAME = "Cafe Meridian";
 
 export type CardRecord = {
   stampsEarned: number;
   stampsRequired: number;
   redemptions: number;
+  email?: string;
 };
 
 function readCards(): Record<string, CardRecord> {
@@ -76,7 +78,36 @@ export function addStamp(cardId: string): CardRecord {
   const updated: CardRecord = { ...current, stampsEarned, redemptions };
   cards[cardId] = updated;
   writeCards(cards);
+
+  const stampsRemaining = updated.stampsRequired - updated.stampsEarned;
+  if (stampsRemaining === 1 && updated.email) {
+    sendStampReminder(updated.email, stampsRemaining);
+  }
+
   return updated;
+}
+
+export function setCardEmail(cardId: string, email: string): CardRecord {
+  const cards = readCards();
+  const current = cards[cardId] ?? {
+    stampsEarned: 0,
+    stampsRequired: DEFAULT_STAMPS_REQUIRED,
+    redemptions: 0,
+  };
+  const updated: CardRecord = { ...current, email };
+  cards[cardId] = updated;
+  writeCards(cards);
+  return updated;
+}
+
+function sendStampReminder(email: string, stampsRemaining: number) {
+  fetch("/api/send-reminder", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, shopName: SHOP_NAME, stampsRemaining }),
+  }).catch((error) => {
+    console.error("Failed to send stamp reminder", error);
+  });
 }
 
 export function useCard(cardId: string | null): CardRecord | null {
