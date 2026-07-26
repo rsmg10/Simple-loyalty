@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import LoyaltyCard from "@/components/LoyaltyCard";
-import { ensureCard, getOrCreateCardId, useCard } from "@/lib/card-store";
+import {
+  ensureCard,
+  getOrCreateCardId,
+  markRedemptionsSeen,
+  useCard,
+} from "@/lib/card-store";
 
 const shop = { name: "Cafe Meridian" };
 const CELEBRATION_DURATION_MS = 2200;
@@ -10,7 +15,6 @@ const CELEBRATION_DURATION_MS = 2200;
 export default function Home() {
   const [cardId, setCardId] = useState<string | null>(null);
   const [justRedeemed, setJustRedeemed] = useState(false);
-  const prevRedemptions = useRef<number | null>(null);
 
   useEffect(() => {
     const id = getOrCreateCardId();
@@ -21,20 +25,21 @@ export default function Home() {
   const card = useCard(cardId);
 
   useEffect(() => {
-    if (!card) return;
+    if (!cardId || !card) return;
 
-    if (prevRedemptions.current !== null && card.redemptions > prevRedemptions.current) {
+    // Compares against a value persisted in storage (not just in-memory),
+    // so the celebration still fires correctly on a cold reload — e.g. a
+    // customer whose phone was locked when staff scanned the winning stamp.
+    if (card.redemptions > card.lastSeenRedemptions) {
       setJustRedeemed(true);
+      markRedemptionsSeen(cardId);
       const timeout = setTimeout(() => setJustRedeemed(false), CELEBRATION_DURATION_MS);
-      prevRedemptions.current = card.redemptions;
       return () => clearTimeout(timeout);
     }
-
-    prevRedemptions.current = card.redemptions;
-  }, [card]);
+  }, [cardId, card]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-canvas p-lg">
+    <main className="flex min-h-screen items-center justify-center bg-canvas p-lg py-xxl">
       {cardId && card ? (
         <LoyaltyCard
           shop={shop}

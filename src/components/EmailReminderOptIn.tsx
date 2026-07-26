@@ -9,23 +9,35 @@ type EmailReminderOptInProps = {
 };
 
 export default function EmailReminderOptIn({ cardId, email }: EmailReminderOptInProps) {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(email ?? "");
   const [saved, setSaved] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!value.trim()) return;
     setCardEmail(cardId, value.trim());
     setSaved(true);
+    setEditing(false);
   }
 
   const confirmedEmail = email ?? (saved ? value : null);
 
-  if (confirmedEmail) {
+  if (confirmedEmail && !editing) {
     return (
       <p className="text-body-sm text-muted">
         📧 We&apos;ll email <span className="text-ink">{confirmedEmail}</span> when you&apos;re 1
-        stamp away.
+        stamp away.{" "}
+        <button
+          type="button"
+          onClick={() => {
+            setValue(confirmedEmail);
+            setEditing(true);
+          }}
+          className="font-semibold text-ink underline underline-offset-2"
+        >
+          Change
+        </button>
       </p>
     );
   }
@@ -35,9 +47,10 @@ export default function EmailReminderOptIn({ cardId, email }: EmailReminderOptIn
       <input
         type="email"
         value={value}
+        autoFocus={editing}
         onChange={(event) => setValue(event.target.value)}
         placeholder="Email for a nudge (optional)"
-        className="h-11 flex-1 rounded-md border border-hairline bg-canvas px-md text-body-md text-ink outline-none focus:border-ink"
+        className="h-11 flex-1 rounded-md border border-hairline bg-canvas px-md text-body-md text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink focus:ring-offset-2 focus:ring-offset-canvas"
       />
       <button
         type="submit"

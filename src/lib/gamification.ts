@@ -1,9 +1,10 @@
 export function getEncouragementCopy(stampsEarned: number, stampsRequired: number): string {
+  // A card is reset to 0 the moment it's completed (see addStamp in
+  // card-store.ts), so `remaining === 0` can never actually be observed
+  // here — the "just redeemed" celebration banner is what communicates
+  // completion instead.
   const remaining = Math.max(stampsRequired - stampsEarned, 0);
 
-  if (remaining === 0) {
-    return "Card complete — your next coffee is on us!";
-  }
   if (remaining === 1) {
     return "So close! 1 more stamp and your next coffee is free.";
   }

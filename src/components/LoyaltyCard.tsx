@@ -41,7 +41,7 @@ export default function LoyaltyCard({
         </>
       )}
 
-      <p className="text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted-soft">
+      <p className="text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted">
         Digital Stamp Card
       </p>
       <h1 className="mt-xxs text-display-sm font-medium tracking-display-sm text-ink">
@@ -71,7 +71,7 @@ export default function LoyaltyCard({
       </div>
 
       <div className="mt-lg border-t border-hairline pt-lg">
-        <p className="text-center text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted-soft">
+        <p className="text-center text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted">
           Show this to staff to add a stamp
         </p>
         <div className="mt-sm">

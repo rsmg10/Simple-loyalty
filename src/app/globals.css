@@ -74,4 +74,10 @@ body {
   .animate-confetti-burst {
     animation: none;
   }
+
+  /* Without the keyframes, confetti dots would otherwise sit as a static
+     cluster at the card's center for the whole celebration duration. */
+  .animate-confetti-burst {
+    display: none;
+  }
 }

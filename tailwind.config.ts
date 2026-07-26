@@ -28,7 +28,10 @@ const config: Config = {
         "on-primary": "#ffffff",
         success: "#22c55e",
         warning: "#f59e0b",
-        error: "#ef4444",
+        // Darkened from design.md's literal #ef4444 (3.62:1 on canvas, fails
+        // WCAG AA for text) to a shade that hits 4.63:1 while staying the
+        // same red family — see the UX review's contrast findings.
+        error: "#dc2626",
       },
       fontFamily: {
         sans: [

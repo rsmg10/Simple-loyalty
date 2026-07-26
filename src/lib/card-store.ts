@@ -14,6 +14,7 @@ export type CardRecord = {
   stampsEarned: number;
   stampsRequired: number;
   redemptions: number;
+  lastSeenRedemptions: number;
   email?: string;
 };
 
@@ -33,6 +34,15 @@ function writeCards(cards: Record<string, CardRecord>) {
   window.dispatchEvent(new Event(CARD_STORE_EVENT));
 }
 
+function defaultCard(): CardRecord {
+  return {
+    stampsEarned: 0,
+    stampsRequired: DEFAULT_STAMPS_REQUIRED,
+    redemptions: 0,
+    lastSeenRedemptions: 0,
+  };
+}
+
 export function getOrCreateCardId(): string {
   let id = window.localStorage.getItem(CARD_ID_KEY);
   if (!id) {
@@ -46,9 +56,8 @@ export function ensureCard(cardId: string): CardRecord {
   const cards = readCards();
   if (!cards[cardId]) {
     cards[cardId] = {
+      ...defaultCard(),
       stampsEarned: DEMO_SEED_STAMPS_EARNED,
-      stampsRequired: DEFAULT_STAMPS_REQUIRED,
-      redemptions: 0,
     };
     writeCards(cards);
   }
@@ -61,11 +70,7 @@ export function getCard(cardId: string): CardRecord | null {
 
 export function addStamp(cardId: string): CardRecord {
   const cards = readCards();
-  const current = cards[cardId] ?? {
-    stampsEarned: 0,
-    stampsRequired: DEFAULT_STAMPS_REQUIRED,
-    redemptions: 0,
-  };
+  const current = cards[cardId] ?? defaultCard();
 
   let { stampsEarned, redemptions } = current;
   stampsEarned += 1;
@@ -89,12 +94,20 @@ export function addStamp(cardId: string): CardRecord {
 
 export function setCardEmail(cardId: string, email: string): CardRecord {
   const cards = readCards();
-  const current = cards[cardId] ?? {
-    stampsEarned: 0,
-    stampsRequired: DEFAULT_STAMPS_REQUIRED,
-    redemptions: 0,
-  };
+  const current = cards[cardId] ?? defaultCard();
   const updated: CardRecord = { ...current, email };
+  cards[cardId] = updated;
+  writeCards(cards);
+  return updated;
+}
+
+// Marks the customer's current redemption count as "seen" so the
+// celebration only fires once per redemption, even across a reload that
+// happens long after staff actually scanned the winning stamp.
+export function markRedemptionsSeen(cardId: string): CardRecord {
+  const cards = readCards();
+  const current = cards[cardId] ?? defaultCard();
+  const updated: CardRecord = { ...current, lastSeenRedemptions: current.redemptions };
   cards[cardId] = updated;
   writeCards(cards);
   return updated;

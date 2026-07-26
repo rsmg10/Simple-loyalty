@@ -27,7 +27,7 @@ export default function StaffPinGate({ onUnlock }: StaffPinGateProps) {
 
   return (
     <div className="w-full max-w-sm rounded-lg border border-hairline bg-canvas p-xl">
-      <p className="text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted-soft">
+      <p className="text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted">
         Staff Access
       </p>
       <h1 className="mt-xxs text-display-sm font-medium tracking-display-sm text-ink">
@@ -41,11 +41,13 @@ export default function StaffPinGate({ onUnlock }: StaffPinGateProps) {
           autoFocus
           value={pin}
           onChange={(event) => setPin(event.target.value)}
-          className="h-11 w-full rounded-md border border-hairline bg-canvas px-md text-body-md text-ink outline-none focus:border-ink"
+          className="h-11 w-full rounded-md border border-hairline bg-canvas px-md text-body-md text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink focus:ring-offset-2 focus:ring-offset-canvas"
           placeholder="PIN"
         />
         {error && (
-          <p className="mt-xs text-body-sm text-error">Incorrect PIN. Try again.</p>
+          <p className="mt-xs text-body-sm text-error" role="alert">
+            Incorrect PIN. Try again.
+          </p>
         )}
         <button
           type="submit"
