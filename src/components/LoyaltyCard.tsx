@@ -77,6 +77,12 @@ export default function LoyaltyCard({
         <div className="mt-sm">
           <CardQRCode value={cardId} />
         </div>
+        <p className="mt-sm text-center text-body-sm text-muted">
+          Camera not handy? Give staff this code:
+        </p>
+        <p className="mt-xxs select-all break-all text-center font-mono text-body-sm text-ink">
+          {cardId}
+        </p>
       </div>
     </div>
   );
