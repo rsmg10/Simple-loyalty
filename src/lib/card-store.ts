@@ -1,14 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { getShopConfig } from "./shop-config";
 
 const CARD_ID_KEY = "loyalty_card_id";
 const CARDS_KEY = "loyalty_cards";
 const CARD_STORE_EVENT = "cardstore:update";
-
-const DEFAULT_STAMPS_REQUIRED = 9;
-const DEMO_SEED_STAMPS_EARNED = 6;
-const SHOP_NAME = "Cafe Meridian";
 
 export type CardRecord = {
   stampsEarned: number;
@@ -37,7 +34,7 @@ function writeCards(cards: Record<string, CardRecord>) {
 function defaultCard(): CardRecord {
   return {
     stampsEarned: 0,
-    stampsRequired: DEFAULT_STAMPS_REQUIRED,
+    stampsRequired: getShopConfig().stampsRequired,
     redemptions: 0,
     lastSeenRedemptions: 0,
   };
@@ -55,10 +52,7 @@ export function getOrCreateCardId(): string {
 export function ensureCard(cardId: string): CardRecord {
   const cards = readCards();
   if (!cards[cardId]) {
-    cards[cardId] = {
-      ...defaultCard(),
-      stampsEarned: DEMO_SEED_STAMPS_EARNED,
-    };
+    cards[cardId] = defaultCard();
     writeCards(cards);
   }
   return cards[cardId];
@@ -117,7 +111,11 @@ function sendStampReminder(email: string, stampsRemaining: number) {
   fetch("/api/send-reminder", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, shopName: SHOP_NAME, stampsRemaining }),
+    body: JSON.stringify({
+      email,
+      shopName: getShopConfig().shopName,
+      stampsRemaining,
+    }),
   }).catch((error) => {
     console.error("Failed to send stamp reminder", error);
   });

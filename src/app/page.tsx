@@ -8,11 +8,12 @@ import {
   markRedemptionsSeen,
   useCard,
 } from "@/lib/card-store";
+import { useShopConfig } from "@/lib/shop-config";
 
-const shop = { name: "Cafe Meridian" };
 const CELEBRATION_DURATION_MS = 2200;
 
 export default function Home() {
+  const { shopName } = useShopConfig();
   const [cardId, setCardId] = useState<string | null>(null);
   const [justRedeemed, setJustRedeemed] = useState(false);
 
@@ -42,7 +43,7 @@ export default function Home() {
     <main className="flex min-h-screen items-center justify-center bg-canvas p-lg py-xxl">
       {cardId && card ? (
         <LoyaltyCard
-          shop={shop}
+          shop={{ name: shopName }}
           card={card}
           cardId={cardId}
           justRedeemed={justRedeemed}

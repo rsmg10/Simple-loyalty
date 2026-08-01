@@ -1,22 +1,20 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-
-// Placeholder shared shop PIN for this local prototype.
-// Will move to real config once the backend is wired up.
-const STAFF_PIN = "1234";
+import { useShopConfig } from "@/lib/shop-config";
 
 type StaffPinGateProps = {
   onUnlock: () => void;
 };
 
 export default function StaffPinGate({ onUnlock }: StaffPinGateProps) {
+  const { staffPin } = useShopConfig();
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (pin === STAFF_PIN) {
+    if (pin === staffPin) {
       setError(false);
       onUnlock();
     } else {
