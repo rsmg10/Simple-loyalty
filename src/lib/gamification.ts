@@ -1,8 +1,8 @@
 export function getEncouragementCopy(stampsEarned: number, stampsRequired: number): string {
-  // A card is reset to 0 the moment it's completed (see addStamp in
-  // card-store.ts), so `remaining === 0` can never actually be observed
-  // here — the "just redeemed" celebration banner is what communicates
-  // completion instead.
+  // A card is reset to 0 the moment it's completed (see the stamp route
+  // handler at src/app/api/cards/[id]/stamp/route.ts), so `remaining === 0`
+  // can never actually be observed here — the "just redeemed" celebration
+  // banner is what communicates completion instead.
   const remaining = Math.max(stampsRequired - stampsEarned, 0);
 
   if (remaining === 1) {

@@ -22,8 +22,8 @@ export default function StampScanner() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraDisabled, setCameraDisabled] = useState(false);
 
-  const lookUpCard = useCallback((cardId: string) => {
-    const card = getCard(cardId);
+  const lookUpCard = useCallback(async (cardId: string) => {
+    const card = await getCard(cardId);
     if (!card) {
       setState({ status: "not-found" });
       return;
@@ -86,10 +86,15 @@ export default function StampScanner() {
     };
   }, [state.status, cameraDisabled, tick]);
 
-  function handleConfirm() {
+  async function handleConfirm() {
     if (state.status !== "confirm") return;
     const previousRedemptions = state.card.redemptions;
-    const updated = addStamp(state.cardId);
+    const updated = await addStamp(state.cardId);
+    if (!updated) {
+      // Most likely the staff session expired — send them back through the PIN gate.
+      window.location.reload();
+      return;
+    }
     setState({
       status: "success",
       card: updated,

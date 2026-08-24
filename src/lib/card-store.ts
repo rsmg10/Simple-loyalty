@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { getShopConfig } from "./shop-config";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const CARD_ID_KEY = "loyalty_card_id";
-const CARDS_KEY = "loyalty_cards";
-const CARD_STORE_EVENT = "cardstore:update";
+const POLL_INTERVAL_MS = 5000;
 
 export type CardRecord = {
+  id: string;
   stampsEarned: number;
   stampsRequired: number;
   redemptions: number;
@@ -15,129 +14,101 @@ export type CardRecord = {
   email?: string;
 };
 
-function readCards(): Record<string, CardRecord> {
-  try {
-    const raw = window.localStorage.getItem(CARDS_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
+async function fetchCard(cardId: string): Promise<CardRecord | null> {
+  const res = await fetch(`/api/cards/${cardId}`);
+  if (!res.ok) return null;
+  return res.json();
 }
 
-function writeCards(cards: Record<string, CardRecord>) {
-  window.localStorage.setItem(CARDS_KEY, JSON.stringify(cards));
-  // The native "storage" event only fires in other tabs; dispatch our own
-  // so the tab that made the change also re-renders.
-  window.dispatchEvent(new Event(CARD_STORE_EVENT));
+export async function getCard(cardId: string): Promise<CardRecord | null> {
+  return fetchCard(cardId);
 }
 
-function defaultCard(): CardRecord {
-  return {
-    stampsEarned: 0,
-    stampsRequired: getShopConfig().stampsRequired,
-    redemptions: 0,
-    lastSeenRedemptions: 0,
-  };
+export async function addStamp(cardId: string): Promise<CardRecord | null> {
+  const res = await fetch(`/api/cards/${cardId}/stamp`, { method: "POST" });
+  if (!res.ok) return null;
+  return res.json();
 }
 
-export function getOrCreateCardId(): string {
-  let id = window.localStorage.getItem(CARD_ID_KEY);
-  if (!id) {
-    id = crypto.randomUUID();
-    window.localStorage.setItem(CARD_ID_KEY, id);
-  }
-  return id;
-}
-
-export function ensureCard(cardId: string): CardRecord {
-  const cards = readCards();
-  if (!cards[cardId]) {
-    cards[cardId] = defaultCard();
-    writeCards(cards);
-  }
-  return cards[cardId];
-}
-
-export function getCard(cardId: string): CardRecord | null {
-  return readCards()[cardId] ?? null;
-}
-
-export function addStamp(cardId: string): CardRecord {
-  const cards = readCards();
-  const current = cards[cardId] ?? defaultCard();
-
-  let { stampsEarned, redemptions } = current;
-  stampsEarned += 1;
-
-  if (stampsEarned >= current.stampsRequired) {
-    stampsEarned = 0;
-    redemptions += 1;
-  }
-
-  const updated: CardRecord = { ...current, stampsEarned, redemptions };
-  cards[cardId] = updated;
-  writeCards(cards);
-
-  const stampsRemaining = updated.stampsRequired - updated.stampsEarned;
-  if (stampsRemaining === 1 && updated.email) {
-    sendStampReminder(updated.email, stampsRemaining);
-  }
-
-  return updated;
-}
-
-export function setCardEmail(cardId: string, email: string): CardRecord {
-  const cards = readCards();
-  const current = cards[cardId] ?? defaultCard();
-  const updated: CardRecord = { ...current, email };
-  cards[cardId] = updated;
-  writeCards(cards);
-  return updated;
-}
-
-// Marks the customer's current redemption count as "seen" so the
-// celebration only fires once per redemption, even across a reload that
-// happens long after staff actually scanned the winning stamp.
-export function markRedemptionsSeen(cardId: string): CardRecord {
-  const cards = readCards();
-  const current = cards[cardId] ?? defaultCard();
-  const updated: CardRecord = { ...current, lastSeenRedemptions: current.redemptions };
-  cards[cardId] = updated;
-  writeCards(cards);
-  return updated;
-}
-
-function sendStampReminder(email: string, stampsRemaining: number) {
-  fetch("/api/send-reminder", {
+export async function setCardEmail(cardId: string, email: string): Promise<CardRecord | null> {
+  const res = await fetch(`/api/cards/${cardId}/email`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email,
-      shopName: getShopConfig().shopName,
-      stampsRemaining,
-    }),
-  }).catch((error) => {
-    console.error("Failed to send stamp reminder", error);
+    body: JSON.stringify({ email }),
   });
+  if (!res.ok) return null;
+  return res.json();
 }
 
-export function useCard(cardId: string | null): CardRecord | null {
-  const [card, setCard] = useState<CardRecord | null>(null);
+export async function markRedemptionsSeen(cardId: string): Promise<CardRecord | null> {
+  const res = await fetch(`/api/cards/${cardId}/seen`, { method: "POST" });
+  if (!res.ok) return null;
+  return res.json();
+}
 
-  const refresh = useCallback(() => {
-    if (!cardId) return;
-    setCard(getCard(cardId));
-  }, [cardId]);
+// Owns "my card" on the customer's own device: creates one on first visit,
+// remembers its id locally, and polls the server so a stamp added by staff
+// on a *different* device shows up here without a manual reload.
+export function useOwnCard(): { cardId: string | null; card: CardRecord | null } {
+  const [cardId, setCardId] = useState<string | null>(null);
+  const [card, setCard] = useState<CardRecord | null>(null);
+  const cardIdRef = useRef<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    const id = cardIdRef.current;
+    if (!id) return;
+    const latest = await fetchCard(id);
+    if (latest) setCard(latest);
+  }, []);
 
   useEffect(() => {
-    refresh();
-    window.addEventListener("storage", refresh);
-    window.addEventListener(CARD_STORE_EVENT, refresh);
-    return () => {
-      window.removeEventListener("storage", refresh);
-      window.removeEventListener(CARD_STORE_EVENT, refresh);
-    };
-  }, [refresh]);
+    let cancelled = false;
 
-  return card;
+    async function init() {
+      let id = window.localStorage.getItem(CARD_ID_KEY);
+      let initialCard: CardRecord | null = null;
+
+      if (!id) {
+        const res = await fetch("/api/cards", { method: "POST" });
+        if (!res.ok || cancelled) return;
+        initialCard = (await res.json()) as CardRecord;
+        id = initialCard.id;
+        window.localStorage.setItem(CARD_ID_KEY, id);
+      }
+
+      if (cancelled || !id) return;
+      cardIdRef.current = id;
+      setCardId(id);
+
+      const latest = initialCard ?? (await fetchCard(id));
+      if (!cancelled && latest) setCard(latest);
+    }
+
+    init();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!cardId) return;
+
+    // Poll unconditionally — `document.visibilityState` is unreliable across
+    // mobile browser/webview contexts (observed stuck on "hidden" for an
+    // actively-viewed tab), so gating the interval on it can silently stop
+    // a customer from ever seeing a stamp land. Focus/visibilitychange just
+    // add an immediate refresh on top of the steady interval.
+    const interval = setInterval(refresh, POLL_INTERVAL_MS);
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [cardId, refresh]);
+
+  return { cardId, card };
 }

@@ -2,33 +2,20 @@
 
 import { useEffect, useState } from "react";
 import LoyaltyCard from "@/components/LoyaltyCard";
-import {
-  ensureCard,
-  getOrCreateCardId,
-  markRedemptionsSeen,
-  useCard,
-} from "@/lib/card-store";
+import { markRedemptionsSeen, useOwnCard } from "@/lib/card-store";
 import { useShopConfig } from "@/lib/shop-config";
 
 const CELEBRATION_DURATION_MS = 2200;
 
 export default function Home() {
   const { shopName } = useShopConfig();
-  const [cardId, setCardId] = useState<string | null>(null);
+  const { cardId, card } = useOwnCard();
   const [justRedeemed, setJustRedeemed] = useState(false);
-
-  useEffect(() => {
-    const id = getOrCreateCardId();
-    ensureCard(id);
-    setCardId(id);
-  }, []);
-
-  const card = useCard(cardId);
 
   useEffect(() => {
     if (!cardId || !card) return;
 
-    // Compares against a value persisted in storage (not just in-memory),
+    // Compares against a value persisted server-side (not just in-memory),
     // so the celebration still fires correctly on a cold reload — e.g. a
     // customer whose phone was locked when staff scanned the winning stamp.
     if (card.redemptions > card.lastSeenRedemptions) {

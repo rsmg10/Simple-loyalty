@@ -1,20 +1,31 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { getShopConfig, setShopConfig } from "@/lib/shop-config";
+import { useEffect, useState, type FormEvent } from "react";
+import { saveShopConfig, useShopConfig } from "@/lib/shop-config";
 
 const MIN_STAMPS_REQUIRED = 3;
 const MAX_STAMPS_REQUIRED = 20;
 
 export default function ShopSetupForm() {
-  const initial = getShopConfig();
-  const [shopName, setShopName] = useState(initial.shopName);
-  const [stampsRequired, setStampsRequired] = useState(String(initial.stampsRequired));
-  const [staffPin, setStaffPin] = useState(initial.staffPin);
+  const { shopName: currentName, stampsRequired: currentStamps, loading } = useShopConfig();
+  const [shopName, setShopName] = useState("");
+  const [stampsRequired, setStampsRequired] = useState("");
+  const [staffPin, setStaffPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent) {
+  // Seed the form once the current config has loaded — not on every
+  // change, or it would clobber the owner's in-progress edits.
+  useEffect(() => {
+    if (!loading) {
+      setShopName(currentName);
+      setStampsRequired(String(currentStamps));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
+
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setSaved(false);
 
@@ -34,13 +45,25 @@ export default function ShopSetupForm() {
       setError(`Stamps required must be a whole number between ${MIN_STAMPS_REQUIRED} and ${MAX_STAMPS_REQUIRED}.`);
       return;
     }
-    if (trimmedPin.length < 4) {
+    if (trimmedPin && trimmedPin.length < 4) {
       setError("Staff PIN must be at least 4 characters.");
       return;
     }
 
     setError(null);
-    setShopConfig({ shopName: trimmedName, stampsRequired: stampsNumber, staffPin: trimmedPin });
+    setSubmitting(true);
+    const result = await saveShopConfig({
+      shopName: trimmedName,
+      stampsRequired: stampsNumber,
+      staffPin: trimmedPin || undefined,
+    });
+    setSubmitting(false);
+
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    setStaffPin("");
     setSaved(true);
   }
 
@@ -81,11 +104,12 @@ export default function ShopSetupForm() {
         </label>
 
         <label className="block">
-          <span className="text-title-sm font-semibold text-ink">Staff PIN</span>
+          <span className="text-title-sm font-semibold text-ink">New staff PIN</span>
           <input
             value={staffPin}
             onChange={(event) => setStaffPin(event.target.value)}
             inputMode="numeric"
+            placeholder="Leave blank to keep the current PIN"
             className="mt-xxs h-11 w-full rounded-md border border-hairline bg-canvas px-md text-body-md text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink focus:ring-offset-2 focus:ring-offset-canvas"
           />
         </label>
@@ -103,7 +127,8 @@ export default function ShopSetupForm() {
 
         <button
           type="submit"
-          className="h-11 w-full rounded-md bg-primary text-button font-semibold text-on-primary"
+          disabled={submitting}
+          className="h-11 w-full rounded-md bg-primary text-button font-semibold text-on-primary disabled:opacity-60"
         >
           Save
         </button>

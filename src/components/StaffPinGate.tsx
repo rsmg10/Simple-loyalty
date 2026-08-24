@@ -1,25 +1,38 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useShopConfig } from "@/lib/shop-config";
 
 type StaffPinGateProps = {
   onUnlock: () => void;
 };
 
 export default function StaffPinGate({ onUnlock }: StaffPinGateProps) {
-  const { staffPin } = useShopConfig();
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (pin === staffPin) {
-      setError(false);
-      onUnlock();
-    } else {
+    setSubmitting(true);
+    setError(false);
+
+    try {
+      const res = await fetch("/api/staff/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin }),
+      });
+
+      if (res.ok) {
+        onUnlock();
+      } else {
+        setError(true);
+        setPin("");
+      }
+    } catch {
       setError(true);
-      setPin("");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -49,7 +62,8 @@ export default function StaffPinGate({ onUnlock }: StaffPinGateProps) {
         )}
         <button
           type="submit"
-          className="mt-lg h-11 w-full rounded-md bg-primary text-button font-semibold text-on-primary"
+          disabled={submitting}
+          className="mt-lg h-11 w-full rounded-md bg-primary text-button font-semibold text-on-primary disabled:opacity-60"
         >
           Unlock
         </button>

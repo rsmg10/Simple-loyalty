@@ -12,13 +12,18 @@ export default function EmailReminderOptIn({ cardId, email }: EmailReminderOptIn
   const [value, setValue] = useState(email ?? "");
   const [saved, setSaved] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!value.trim()) return;
-    setCardEmail(cardId, value.trim());
-    setSaved(true);
-    setEditing(false);
+    setSubmitting(true);
+    const updated = await setCardEmail(cardId, value.trim());
+    setSubmitting(false);
+    if (updated) {
+      setSaved(true);
+      setEditing(false);
+    }
   }
 
   const confirmedEmail = email ?? (saved ? value : null);
@@ -54,7 +59,8 @@ export default function EmailReminderOptIn({ cardId, email }: EmailReminderOptIn
       />
       <button
         type="submit"
-        className="h-11 rounded-md border border-hairline px-md text-button font-semibold text-ink"
+        disabled={submitting}
+        className="h-11 rounded-md border border-hairline px-md text-button font-semibold text-ink disabled:opacity-60"
       >
         Save
       </button>

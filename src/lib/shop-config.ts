@@ -1,53 +1,61 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-
-const SHOP_CONFIG_KEY = "loyalty_shop_config";
-const SHOP_CONFIG_EVENT = "shopconfig:update";
+import { useEffect, useState } from "react";
 
 export type ShopConfig = {
   shopName: string;
   stampsRequired: number;
-  staffPin: string;
+  loading: boolean;
 };
-
-export const DEFAULT_SHOP_CONFIG: ShopConfig = {
-  shopName: "Cafe Meridian",
-  stampsRequired: 9,
-  staffPin: "1234",
-};
-
-export function getShopConfig(): ShopConfig {
-  try {
-    const raw = window.localStorage.getItem(SHOP_CONFIG_KEY);
-    if (!raw) return DEFAULT_SHOP_CONFIG;
-    return { ...DEFAULT_SHOP_CONFIG, ...JSON.parse(raw) };
-  } catch {
-    return DEFAULT_SHOP_CONFIG;
-  }
-}
-
-export function setShopConfig(config: ShopConfig) {
-  window.localStorage.setItem(SHOP_CONFIG_KEY, JSON.stringify(config));
-  window.dispatchEvent(new Event(SHOP_CONFIG_EVENT));
-}
 
 export function useShopConfig(): ShopConfig {
-  const [config, setConfig] = useState<ShopConfig>(DEFAULT_SHOP_CONFIG);
-
-  const refresh = useCallback(() => {
-    setConfig(getShopConfig());
-  }, []);
+  const [shopName, setShopName] = useState("");
+  const [stampsRequired, setStampsRequired] = useState(9);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    refresh();
-    window.addEventListener("storage", refresh);
-    window.addEventListener(SHOP_CONFIG_EVENT, refresh);
-    return () => {
-      window.removeEventListener("storage", refresh);
-      window.removeEventListener(SHOP_CONFIG_EVENT, refresh);
-    };
-  }, [refresh]);
+    let cancelled = false;
 
-  return config;
+    fetch("/api/shop")
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((data: { name: string; stampsRequired: number }) => {
+        if (cancelled) return;
+        setShopName(data.name);
+        setStampsRequired(data.stampsRequired);
+      })
+      .catch((error) => {
+        console.error("Failed to load shop config", error);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { shopName, stampsRequired, loading };
+}
+
+export async function saveShopConfig(config: {
+  shopName: string;
+  stampsRequired: number;
+  staffPin?: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await fetch("/api/shop", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: config.shopName,
+      stampsRequired: config.stampsRequired,
+      staffPin: config.staffPin,
+    }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    return { ok: false, error: data?.error ?? "Failed to save shop config." };
+  }
+  return { ok: true };
 }
