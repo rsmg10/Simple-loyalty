@@ -27,3 +27,22 @@ export function toCardJson(row: CardRow): CardJson {
     email: row.email ?? undefined,
   };
 }
+
+// A card rolls over to a redemption the moment it hits its stamp
+// threshold — earning the final stamp *is* the redemption, staff hand over
+// the free item in the same interaction.
+export function applyStamp(card: {
+  stamps_earned: number;
+  stamps_required: number;
+  redemptions: number;
+}): { stamps_earned: number; redemptions: number } {
+  let stampsEarned = card.stamps_earned + 1;
+  let redemptions = card.redemptions;
+
+  if (stampsEarned >= card.stamps_required) {
+    stampsEarned = 0;
+    redemptions += 1;
+  }
+
+  return { stamps_earned: stampsEarned, redemptions };
+}

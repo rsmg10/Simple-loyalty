@@ -23,6 +23,10 @@ create table if not exists cards (
 
 create index if not exists cards_shop_id_idx on cards(shop_id);
 
+-- Staff PIN lockout — safe to re-run even if shops already exists.
+alter table shops add column if not exists failed_pin_attempts int not null default 0;
+alter table shops add column if not exists pin_locked_until timestamptz;
+
 -- Seed the single shop this MVP operates. Change the PIN before going live.
 insert into shops (name, stamps_required, staff_pin)
 select 'Cafe Meridian', 9, '1234'

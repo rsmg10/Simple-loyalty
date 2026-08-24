@@ -8,13 +8,13 @@ type StaffPinGateProps = {
 
 export default function StaffPinGate({ onUnlock }: StaffPinGateProps) {
   const [pin, setPin] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setSubmitting(true);
-    setError(false);
+    setError(null);
 
     try {
       const res = await fetch("/api/staff/session", {
@@ -25,12 +25,15 @@ export default function StaffPinGate({ onUnlock }: StaffPinGateProps) {
 
       if (res.ok) {
         onUnlock();
+      } else if (res.status === 429) {
+        setError("Too many incorrect attempts. Try again in a few minutes.");
+        setPin("");
       } else {
-        setError(true);
+        setError("Incorrect PIN. Try again.");
         setPin("");
       }
     } catch {
-      setError(true);
+      setError("Incorrect PIN. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -57,7 +60,7 @@ export default function StaffPinGate({ onUnlock }: StaffPinGateProps) {
         />
         {error && (
           <p className="mt-xs text-body-sm text-error" role="alert">
-            Incorrect PIN. Try again.
+            {error}
           </p>
         )}
         <button

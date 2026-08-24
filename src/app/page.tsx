@@ -9,7 +9,7 @@ const CELEBRATION_DURATION_MS = 2200;
 
 export default function Home() {
   const { shopName } = useShopConfig();
-  const { cardId, card } = useOwnCard();
+  const { cardId, card, loadError, retry } = useOwnCard();
   const [justRedeemed, setJustRedeemed] = useState(false);
 
   useEffect(() => {
@@ -35,6 +35,17 @@ export default function Home() {
           cardId={cardId}
           justRedeemed={justRedeemed}
         />
+      ) : loadError ? (
+        <div className="w-full max-w-sm rounded-lg border border-hairline bg-canvas p-xl text-center">
+          <p className="text-body-md text-ink">Couldn&apos;t load your card.</p>
+          <p className="mt-xs text-body-sm text-muted">Check your connection and try again.</p>
+          <button
+            onClick={retry}
+            className="mt-lg h-11 w-full rounded-md bg-primary text-button font-semibold text-on-primary"
+          >
+            Retry
+          </button>
+        </div>
       ) : (
         <p className="text-body-sm text-muted">Loading your card…</p>
       )}

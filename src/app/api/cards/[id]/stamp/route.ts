@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { toCardJson } from "@/lib/card-json";
+import { applyStamp, toCardJson } from "@/lib/card-json";
 import { sendStampReminderEmail } from "@/lib/email";
 import { getShop } from "@/lib/shop-repo";
 import { STAFF_SESSION_COOKIE, verifyStaffSessionCookie } from "@/lib/staff-session";
@@ -24,16 +24,11 @@ export async function POST(_request: Request, { params }: { params: { id: string
     return NextResponse.json({ error: "Card not found" }, { status: 404 });
   }
 
-  let stampsEarned = existing.stamps_earned + 1;
-  let redemptions = existing.redemptions;
-  if (stampsEarned >= existing.stamps_required) {
-    stampsEarned = 0;
-    redemptions += 1;
-  }
+  const { stamps_earned, redemptions } = applyStamp(existing);
 
   const { data: updated, error: updateError } = await supabase
     .from("cards")
-    .update({ stamps_earned: stampsEarned, redemptions })
+    .update({ stamps_earned, redemptions })
     .eq("id", params.id)
     .select()
     .single();
@@ -45,7 +40,7 @@ export async function POST(_request: Request, { params }: { params: { id: string
   const stampsRemaining = updated.stamps_required - updated.stamps_earned;
   if (stampsRemaining === 1 && updated.email) {
     // Fire-and-forget so a slow/failed email send never delays the staff UI.
-    sendStampReminderEmail(updated.email, shop.name, stampsRemaining).catch(() => {});
+    sendStampReminderEmail(updated.email, shop.name, stampsRemaining, updated.id).catch(() => {});
   }
 
   return NextResponse.json(toCardJson(updated));

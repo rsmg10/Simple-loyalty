@@ -49,9 +49,16 @@ export async function markRedemptionsSeen(cardId: string): Promise<CardRecord | 
 // Owns "my card" on the customer's own device: creates one on first visit,
 // remembers its id locally, and polls the server so a stamp added by staff
 // on a *different* device shows up here without a manual reload.
-export function useOwnCard(): { cardId: string | null; card: CardRecord | null } {
+export function useOwnCard(): {
+  cardId: string | null;
+  card: CardRecord | null;
+  loadError: boolean;
+  retry: () => void;
+} {
   const [cardId, setCardId] = useState<string | null>(null);
   const [card, setCard] = useState<CardRecord | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const cardIdRef = useRef<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -65,23 +72,30 @@ export function useOwnCard(): { cardId: string | null; card: CardRecord | null }
     let cancelled = false;
 
     async function init() {
-      let id = window.localStorage.getItem(CARD_ID_KEY);
-      let initialCard: CardRecord | null = null;
+      setLoadError(false);
+      try {
+        let id = window.localStorage.getItem(CARD_ID_KEY);
+        let initialCard: CardRecord | null = null;
 
-      if (!id) {
-        const res = await fetch("/api/cards", { method: "POST" });
-        if (!res.ok || cancelled) return;
-        initialCard = (await res.json()) as CardRecord;
-        id = initialCard.id;
-        window.localStorage.setItem(CARD_ID_KEY, id);
+        if (!id) {
+          const res = await fetch("/api/cards", { method: "POST" });
+          if (!res.ok) throw new Error("Failed to create card");
+          initialCard = (await res.json()) as CardRecord;
+          id = initialCard.id;
+          window.localStorage.setItem(CARD_ID_KEY, id);
+        }
+
+        if (cancelled || !id) return;
+        cardIdRef.current = id;
+        setCardId(id);
+
+        const latest = initialCard ?? (await fetchCard(id));
+        if (cancelled) return;
+        if (!latest) throw new Error("Failed to load card");
+        setCard(latest);
+      } catch {
+        if (!cancelled) setLoadError(true);
       }
-
-      if (cancelled || !id) return;
-      cardIdRef.current = id;
-      setCardId(id);
-
-      const latest = initialCard ?? (await fetchCard(id));
-      if (!cancelled && latest) setCard(latest);
     }
 
     init();
@@ -89,7 +103,7 @@ export function useOwnCard(): { cardId: string | null; card: CardRecord | null }
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt]);
 
   useEffect(() => {
     if (!cardId) return;
@@ -110,5 +124,7 @@ export function useOwnCard(): { cardId: string | null; card: CardRecord | null }
     };
   }, [cardId, refresh]);
 
-  return { cardId, card };
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+
+  return { cardId, card, loadError, retry };
 }
