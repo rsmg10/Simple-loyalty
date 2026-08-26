@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { getShop, isPinLocked, recordFailedPinAttempt, resetPinAttempts } from "@/lib/shop-repo";
 import { STAFF_SESSION_COOKIE, createStaffSessionCookie } from "@/lib/staff-session";
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { pin } = body as { pin?: string };
 
-  if (typeof pin !== "string" || pin !== shop.staffPin) {
+  if (typeof pin !== "string" || !(await bcrypt.compare(pin, shop.staffPinHash))) {
     await recordFailedPinAttempt(shop);
     return NextResponse.json({ error: "Incorrect PIN" }, { status: 401 });
   }
