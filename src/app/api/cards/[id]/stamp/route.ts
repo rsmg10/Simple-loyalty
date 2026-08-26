@@ -28,7 +28,7 @@ export async function POST(_request: Request, { params }: { params: { id: string
 
   const { data: updated, error: updateError } = await supabase
     .from("cards")
-    .update({ stamps_earned, redemptions })
+    .update({ stamps_earned, redemptions, lifetime_stamps: existing.lifetime_stamps + 1 })
     .eq("id", params.id)
     .select()
     .single();
