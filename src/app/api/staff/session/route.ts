@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { parseJsonBody } from "@/lib/parse-json-body";
 import { getShop, isPinLocked, recordFailedPinAttempt, resetPinAttempts } from "@/lib/shop-repo";
 import { STAFF_SESSION_COOKIE, createStaffSessionCookie } from "@/lib/staff-session";
 
@@ -14,8 +15,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const body = await request.json();
-  const { pin } = body as { pin?: string };
+  const body = await parseJsonBody<{ pin?: string }>(request);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+  const { pin } = body;
 
   if (typeof pin !== "string" || pin !== shop.staffPin) {
     await recordFailedPinAttempt(shop);

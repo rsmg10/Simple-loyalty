@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { parseJsonBody } from "@/lib/parse-json-body";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getShop } from "@/lib/shop-repo";
 import { STAFF_SESSION_COOKIE, verifyStaffSessionCookie } from "@/lib/staff-session";
@@ -23,12 +24,15 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
-  const { name, stampsRequired, staffPin } = body as {
+  const body = await parseJsonBody<{
     name?: string;
     stampsRequired?: number;
     staffPin?: string;
-  };
+  }>(request);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+  const { name, stampsRequired, staffPin } = body;
 
   if (typeof name !== "string" || !name.trim()) {
     return NextResponse.json({ error: "Shop name is required" }, { status: 400 });
