@@ -57,11 +57,6 @@ npm run dev
       your business's physical mailing address to the email footer in
       [`src/lib/email.ts`](src/lib/email.ts) — CAN-SPAM requires it, and it
       isn't something the app can infer, so it's left as a manual edit.
-- [ ] Update the hardcoded "Cafe Meridian" strings in
-      [`src/app/layout.tsx`](src/app/layout.tsx) (page title/metadata) and
-      [`public/manifest.json`](public/manifest.json) (PWA name/icons) to the
-      real café's name and branding — these are static at build time, not
-      pulled from the database.
 - [ ] Point an uptime monitor (UptimeRobot, Vercel's own, etc.) at
       `GET /api/health` — returns `200` when the app can reach the
       database, `503` otherwise.
