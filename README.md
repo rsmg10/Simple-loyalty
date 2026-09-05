@@ -48,6 +48,21 @@ cp .env.local.example .env.local   # fill in your Supabase project's values
 npm run dev
 ```
 
+### Custom domain
+
+Most cafés will want their own domain (e.g. `loyalty.mycafe.com`) instead of
+the default `*.vercel.app` URL:
+
+1. In the Vercel project, go to **Settings → Domains** and add the domain.
+2. Vercel will give you a DNS record to create (usually a **CNAME** pointing
+   a subdomain like `loyalty` at `cname.vercel-dns.com`, or an **A** record
+   if you're using a bare apex domain). Add that record at your domain
+   registrar.
+3. Once the domain verifies, update `NEXT_PUBLIC_APP_URL` to the new custom
+   domain (e.g. `https://loyalty.mycafe.com`) and redeploy — it's used to
+   build absolute links such as the unsubscribe link in reminder emails and
+   the QR code on the `/signage` page.
+
 ## Pre-launch checklist
 
 - [ ] Change the staff PIN from the seeded `1234` — visit `/setup`, unlock
@@ -60,6 +75,11 @@ npm run dev
 - [ ] Point an uptime monitor (UptimeRobot, Vercel's own, etc.) at
       `GET /api/health` — returns `200` when the app can reach the
       database, `503` otherwise.
+- [ ] Print or display `/signage` at the counter — a "scan to join" poster
+      with a large QR code, the shop name, and the stamps-required count.
+      It's publicly accessible (no staff PIN needed), so pull it up once the
+      real shop name and stamps count are set via `/setup` and print it or
+      leave it open on a tablet.
 
 ## Day-2 operations
 
