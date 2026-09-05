@@ -38,6 +38,45 @@ export function useShopConfig(): ShopConfig {
   return { shopName, stampsRequired, loading };
 }
 
+export type ShopStats = {
+  totalCards: number;
+  totalStampsGiven: number;
+  totalRedemptions: number;
+  loading: boolean;
+};
+
+export function useShopStats(): ShopStats {
+  const [totalCards, setTotalCards] = useState(0);
+  const [totalStampsGiven, setTotalStampsGiven] = useState(0);
+  const [totalRedemptions, setTotalRedemptions] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/shop/stats")
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((data: { totalCards: number; totalStampsGiven: number; totalRedemptions: number }) => {
+        if (cancelled) return;
+        setTotalCards(data.totalCards);
+        setTotalStampsGiven(data.totalStampsGiven);
+        setTotalRedemptions(data.totalRedemptions);
+      })
+      .catch((error) => {
+        console.error("Failed to load shop stats", error);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { totalCards, totalStampsGiven, totalRedemptions, loading };
+}
+
 export async function saveShopConfig(config: {
   shopName: string;
   stampsRequired: number;
