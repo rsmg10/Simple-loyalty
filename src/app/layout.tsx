@@ -2,6 +2,12 @@ import type { Metadata, Viewport } from "next";
 import { getShop } from "@/lib/shop-repo";
 import "./globals.css";
 
+// generateMetadata() needs a live DB read for the shop name — force every
+// page to render at request time instead of build time, or `next build`
+// fails without a reachable Supabase connection (and a static build would
+// never reflect a shop-name change made after deploy anyway).
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata(): Promise<Metadata> {
   const shop = await getShop();
 

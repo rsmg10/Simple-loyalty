@@ -1,6 +1,10 @@
 import type { MetadataRoute } from "next";
 import { getShop } from "@/lib/shop-repo";
 
+// Same reasoning as the root layout's generateMetadata — this needs a live
+// DB read, so it must never be attempted at build time.
+export const dynamic = "force-dynamic";
+
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const shop = await getShop();
 
