@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { parseJsonBody } from "@/lib/parse-json-body";
@@ -53,11 +54,11 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Staff PIN must be at least 4 characters." }, { status: 400 });
   }
 
-  const update: { name: string; stamps_required: number; staff_pin?: string } = {
+  const update: { name: string; stamps_required: number; staff_pin_hash?: string } = {
     name: name.trim(),
     stamps_required: stampsRequired,
   };
-  if (trimmedPin) update.staff_pin = trimmedPin;
+  if (trimmedPin) update.staff_pin_hash = await bcrypt.hash(trimmedPin, 10);
 
   const supabase = getSupabaseAdmin();
   const { error } = await supabase.from("shops").update(update).eq("id", shop.id);

@@ -4,7 +4,7 @@ export type Shop = {
   id: string;
   name: string;
   stampsRequired: number;
-  staffPin: string;
+  staffPinHash: string;
   failedPinAttempts: number;
   pinLockedUntil: string | null;
 };
@@ -18,7 +18,7 @@ export async function getShop(): Promise<Shop> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("shops")
-    .select("id, name, stamps_required, staff_pin, failed_pin_attempts, pin_locked_until")
+    .select("id, name, stamps_required, staff_pin_hash, failed_pin_attempts, pin_locked_until")
     .limit(1)
     .single();
 
@@ -30,7 +30,7 @@ export async function getShop(): Promise<Shop> {
     id: data.id,
     name: data.name,
     stampsRequired: data.stamps_required,
-    staffPin: data.staff_pin,
+    staffPinHash: data.staff_pin_hash,
     failedPinAttempts: data.failed_pin_attempts,
     pinLockedUntil: data.pin_locked_until,
   };

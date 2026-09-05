@@ -6,7 +6,7 @@ create table if not exists shops (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   stamps_required int not null,
-  staff_pin text not null,
+  staff_pin_hash text not null,
   created_at timestamptz not null default now()
 );
 
@@ -28,6 +28,10 @@ alter table shops add column if not exists failed_pin_attempts int not null defa
 alter table shops add column if not exists pin_locked_until timestamptz;
 
 -- Seed the single shop this MVP operates. Change the PIN before going live.
-insert into shops (name, stamps_required, staff_pin)
-select 'Cafe Meridian', 9, '1234'
+-- crypt(..., gen_salt('bf')) produces a standard bcrypt hash ($2a$/$2b$
+-- prefixed) via pgcrypto. pgcrypto's bcrypt implementation is wire-compatible
+-- with bcryptjs, so the Node app can verify this hash directly with
+-- bcrypt.compare() — the seed is never stored as plaintext.
+insert into shops (name, stamps_required, staff_pin_hash)
+select 'Cafe Meridian', 9, crypt('1234', gen_salt('bf'))
 where not exists (select 1 from shops);

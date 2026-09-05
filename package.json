@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
+    "bcryptjs": "^3.0.3",
     "jsqr": "^1.4.0",
     "next": "14.2.35",
     "qrcode.react": "^3.1.0",
@@ -19,6 +20,7 @@
     "resend": "^4.0.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
