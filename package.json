@@ -12,8 +12,10 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
     "bcryptjs": "^3.0.3",
+    "google-auth-library": "^11.0.2",
     "jsqr": "^1.4.0",
     "next": "14.2.35",
+    "passkit-generator": "^3.5.8",
     "qrcode.react": "^3.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -26,6 +28,7 @@
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.39",
+    "sharp": "^0.35.4",
     "tailwindcss": "^3.4.4",
     "typescript": "^5",
     "vitest": "^4.1.11"

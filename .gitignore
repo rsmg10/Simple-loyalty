@@ -11,6 +11,9 @@
 # misc
 .DS_Store
 *.pem
+# Public Apple WWDR intermediate cert — safe and required to be committed;
+# every .pkpass signature must chain through it. See its own header comment.
+!certs/AppleWWDRCAG4.pem
 
 # debug
 npm-debug.log*

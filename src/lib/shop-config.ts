@@ -5,12 +5,16 @@ import { useEffect, useState } from "react";
 export type ShopConfig = {
   shopName: string;
   stampsRequired: number;
+  appleWalletEnabled: boolean;
+  googleWalletEnabled: boolean;
   loading: boolean;
 };
 
 export function useShopConfig(): ShopConfig {
   const [shopName, setShopName] = useState("");
   const [stampsRequired, setStampsRequired] = useState(9);
+  const [appleWalletEnabled, setAppleWalletEnabled] = useState(false);
+  const [googleWalletEnabled, setGoogleWalletEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,11 +22,20 @@ export function useShopConfig(): ShopConfig {
 
     fetch("/api/shop")
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
-      .then((data: { name: string; stampsRequired: number }) => {
-        if (cancelled) return;
-        setShopName(data.name);
-        setStampsRequired(data.stampsRequired);
-      })
+      .then(
+        (data: {
+          name: string;
+          stampsRequired: number;
+          appleWalletEnabled: boolean;
+          googleWalletEnabled: boolean;
+        }) => {
+          if (cancelled) return;
+          setShopName(data.name);
+          setStampsRequired(data.stampsRequired);
+          setAppleWalletEnabled(data.appleWalletEnabled);
+          setGoogleWalletEnabled(data.googleWalletEnabled);
+        },
+      )
       .catch((error) => {
         console.error("Failed to load shop config", error);
       })
@@ -35,7 +48,7 @@ export function useShopConfig(): ShopConfig {
     };
   }, []);
 
-  return { shopName, stampsRequired, loading };
+  return { shopName, stampsRequired, appleWalletEnabled, googleWalletEnabled, loading };
 }
 
 export type ShopStats = {

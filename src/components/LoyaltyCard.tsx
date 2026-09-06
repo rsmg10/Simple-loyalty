@@ -3,6 +3,7 @@ import Confetti from "./Confetti";
 import EmailReminderOptIn from "./EmailReminderOptIn";
 import ProgressBar from "./ProgressBar";
 import StampGrid from "./StampGrid";
+import WalletButtons from "./WalletButtons";
 import { getEncouragementCopy } from "@/lib/gamification";
 
 type Shop = {
@@ -20,6 +21,8 @@ type LoyaltyCardProps = {
   card: Card;
   cardId: string;
   justRedeemed?: boolean;
+  appleWalletEnabled?: boolean;
+  googleWalletEnabled?: boolean;
 };
 
 export default function LoyaltyCard({
@@ -27,6 +30,8 @@ export default function LoyaltyCard({
   card,
   cardId,
   justRedeemed = false,
+  appleWalletEnabled = false,
+  googleWalletEnabled = false,
 }: LoyaltyCardProps) {
   const { stampsEarned, stampsRequired } = card;
 
@@ -68,6 +73,14 @@ export default function LoyaltyCard({
 
       <div className="mt-md">
         <EmailReminderOptIn cardId={cardId} email={card.email} />
+      </div>
+
+      <div className="mt-md">
+        <WalletButtons
+          cardId={cardId}
+          appleWalletEnabled={appleWalletEnabled}
+          googleWalletEnabled={googleWalletEnabled}
+        />
       </div>
 
       <div className="mt-lg border-t border-hairline pt-lg">

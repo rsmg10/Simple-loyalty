@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { isAppleWalletConfigured } from "@/lib/apple-wallet";
+import { isGoogleWalletConfigured } from "@/lib/google-wallet";
 import { parseJsonBody } from "@/lib/parse-json-body";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getShop } from "@/lib/shop-repo";
@@ -15,7 +17,12 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const shop = await getShop();
-  return NextResponse.json({ name: shop.name, stampsRequired: shop.stampsRequired });
+  return NextResponse.json({
+    name: shop.name,
+    stampsRequired: shop.stampsRequired,
+    appleWalletEnabled: isAppleWalletConfigured(),
+    googleWalletEnabled: isGoogleWalletConfigured(),
+  });
 }
 
 export async function PUT(request: Request) {

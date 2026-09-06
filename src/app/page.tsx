@@ -8,7 +8,7 @@ import { useShopConfig } from "@/lib/shop-config";
 const CELEBRATION_DURATION_MS = 2200;
 
 export default function Home() {
-  const { shopName } = useShopConfig();
+  const { shopName, appleWalletEnabled, googleWalletEnabled } = useShopConfig();
   const { cardId, card, loadError, retry } = useOwnCard();
   const [justRedeemed, setJustRedeemed] = useState(false);
 
@@ -34,6 +34,8 @@ export default function Home() {
           card={card}
           cardId={cardId}
           justRedeemed={justRedeemed}
+          appleWalletEnabled={appleWalletEnabled}
+          googleWalletEnabled={googleWalletEnabled}
         />
       ) : loadError ? (
         <div className="w-full max-w-sm rounded-lg border border-hairline bg-canvas p-xl text-center">

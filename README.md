@@ -63,6 +63,61 @@ the default `*.vercel.app` URL:
    build absolute links such as the unsubscribe link in reminder emails and
    the QR code on the `/signage` page.
 
+## Wallet passes (optional)
+
+Customers can add their card to Apple Wallet / Google Wallet instead of just
+holding a QR code in the browser. Both are fully optional — without the env
+vars below set, the app behaves exactly as it does today and the "Add to
+Wallet" buttons simply don't appear.
+
+**Apple Wallet** — requires a paid
+[Apple Developer Program](https://developer.apple.com/programs/) membership:
+
+1. Register a **Pass Type ID** (Certificates, Identifiers & Profiles →
+   Identifiers → Pass Type IDs) — this becomes `APPLE_PASS_TYPE_IDENTIFIER`
+   (looks like `pass.com.yourcafe.loyalty`).
+2. Your **Team ID** (top-right of the Apple Developer account page) becomes
+   `APPLE_TEAM_IDENTIFIER`.
+3. Create a certificate for that Pass Type ID, download it, and export it
+   from Keychain Access as a `.p12` file (set a password when prompted — that
+   password is `APPLE_PASS_SIGNER_KEY_PASSPHRASE`). Then, with OpenSSL:
+   ```bash
+   openssl pkcs12 -in Certificates.p12 -clcerts -nokeys -out cert.pem -passin pass:<your .p12 password>
+   openssl pkcs12 -in Certificates.p12 -nocerts -out key.pem -passin pass:<your .p12 password> -passout pass:<your .p12 password>
+   base64 -w0 cert.pem   # → APPLE_PASS_SIGNER_CERT_BASE64
+   base64 -w0 key.pem    # → APPLE_PASS_SIGNER_KEY_BASE64
+   ```
+4. The WWDR intermediate certificate is already bundled in this repo
+   ([`certs/AppleWWDRCAG4.pem`](certs/AppleWWDRCAG4.pem)) — nothing to do
+   there unless Apple rotates it (see the comment in that file).
+
+The pass icon/logo images in [`public/wallet`](public/wallet) are plain
+placeholders generated from `public/icon.svg`. Replace them with real
+branded PNGs at the same filenames (or re-run
+`node scripts/generate-wallet-images.mjs` after replacing `public/icon.svg`),
+then redeploy.
+
+**Google Wallet** — requires a Google Cloud project with the
+[Google Wallet API](https://developers.google.com/wallet/generic/gs-getting-started)
+enabled:
+
+1. Request Wallet API access and get your **Issuer ID** from the
+   [Google Pay & Wallet Console](https://pay.google.com/business/console) —
+   this becomes `GOOGLE_WALLET_ISSUER_ID`.
+2. Create a service account with the "Wallet Object Issuer" role, download
+   its JSON key. `GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL` is the key's
+   `client_email`; `GOOGLE_WALLET_SERVICE_ACCOUNT_KEY` is its `private_key`
+   (paste it as-is — literal `\n` escapes in the value are handled
+   automatically).
+3. Run the one-off class-provisioning script once, after the env vars above
+   are set:
+   ```bash
+   node --env-file=.env.local scripts/setup-google-wallet-class.mjs "Your Cafe Name"
+   ```
+   A newly-created class starts in Google's `UNDER_REVIEW` state — Google
+   must approve it (a manual review on their end) before passes are visible
+   to real customers outside your own test Google account.
+
 ## Pre-launch checklist
 
 - [ ] Change the staff PIN from the seeded `1234` — visit `/setup`, unlock
@@ -111,6 +166,12 @@ the default `*.vercel.app` URL:
 - **Card identity is device-local.** A customer's card is remembered via
   their browser's storage, not an account. Clearing browser data or
   switching devices starts a new card.
+- **Apple Wallet passes don't auto-update.** Google Wallet passes update
+  live (Google hosts the pass state, so the app pushes the new stamp count
+  after every stamp), but Apple Wallet passes are generated once at download
+  time — a customer needs to re-add the pass to see a fresh count.
+  Auto-updating Apple passes requires a separate device-registration +
+  APNs push web service, not built yet. See [`src/lib/apple-wallet.ts`](src/lib/apple-wallet.ts).
 
 ## Tests
 
