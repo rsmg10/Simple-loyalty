@@ -4,9 +4,10 @@ import { NextResponse } from "next/server";
 import { isAppleWalletConfigured } from "@/lib/apple-wallet";
 import { isGoogleWalletConfigured } from "@/lib/google-wallet";
 import { parseJsonBody } from "@/lib/parse-json-body";
+import { isAuthorizedForShopSettings } from "@/lib/shop-auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getShop } from "@/lib/shop-repo";
-import { STAFF_SESSION_COOKIE, verifyStaffSessionCookie } from "@/lib/staff-session";
+import { STAFF_SESSION_COOKIE } from "@/lib/staff-session";
 
 const MIN_STAMPS_REQUIRED = 3;
 const MAX_STAMPS_REQUIRED = 20;
@@ -27,8 +28,8 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   const shop = await getShop();
-  const sessionCookie = cookies().get(STAFF_SESSION_COOKIE)?.value;
-  if (!verifyStaffSessionCookie(sessionCookie, shop.id)) {
+  const staffSessionCookie = cookies().get(STAFF_SESSION_COOKIE)?.value;
+  if (!(await isAuthorizedForShopSettings(shop, staffSessionCookie))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

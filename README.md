@@ -141,7 +141,7 @@ enabled:
 - **Forgot the staff PIN?** There's no self-service recovery flow. Reset it
   directly in the Supabase SQL editor:
   ```sql
-  update shops set staff_pin = 'NEW-PIN', failed_pin_attempts = 0, pin_locked_until = null;
+  update shops set staff_pin_hash = crypt('NEW-PIN', gen_salt('bf')), failed_pin_attempts = 0, pin_locked_until = null;
   ```
 - **Staff PIN lockout.** After 5 wrong PIN attempts in a row, `/staff` locks
   out further attempts for 5 minutes (even with the correct PIN) — protects
@@ -151,6 +151,18 @@ enabled:
 - **A customer wants their data removed.** Their card row can be deleted
   directly in Supabase (`delete from cards where id = '...'`); the card id
   is the code printed under their QR code.
+- **Owner authentication.** Optional and opt-in per shop — set
+  `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` (see
+  `.env.local.example`), have the owner create an account at `/owner/signup`,
+  then link it to their shop directly in Supabase SQL editor (there's no
+  self-serve "create my shop" flow yet):
+  ```sql
+  update shops set owner_user_id = '<the auth.users.id from Supabase Auth>' where id = '...';
+  ```
+  Once linked, `/setup` requires that owner's login instead of the staff
+  PIN — the staff PIN keeps working at `/staff` either way, unaffected.
+  Leave `owner_user_id` null (the default) to keep using the staff PIN for
+  `/setup` too, exactly as before this existed.
 
 ## Known limitations (by design, for this MVP)
 

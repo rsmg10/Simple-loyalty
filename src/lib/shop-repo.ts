@@ -2,7 +2,8 @@ import { headers } from "next/headers";
 import { getSupabaseAdmin } from "./supabase";
 
 const SHOP_SLUG_HEADER = "x-shop-slug";
-const SHOP_COLUMNS = "id, name, stamps_required, staff_pin_hash, failed_pin_attempts, pin_locked_until";
+const SHOP_COLUMNS =
+  "id, name, stamps_required, staff_pin_hash, failed_pin_attempts, pin_locked_until, owner_user_id";
 
 export type Shop = {
   id: string;
@@ -11,6 +12,7 @@ export type Shop = {
   staffPinHash: string;
   failedPinAttempts: number;
   pinLockedUntil: string | null;
+  ownerUserId: string | null;
 };
 
 const MAX_FAILED_PIN_ATTEMPTS = 5;
@@ -53,6 +55,7 @@ export async function getShop(): Promise<Shop> {
     staffPinHash: data.staff_pin_hash,
     failedPinAttempts: data.failed_pin_attempts,
     pinLockedUntil: data.pin_locked_until,
+    ownerUserId: data.owner_user_id,
   };
 }
 

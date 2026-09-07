@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { isAuthorizedForShopSettings } from "@/lib/shop-auth";
 import { getShop } from "@/lib/shop-repo";
-import { STAFF_SESSION_COOKIE, verifyStaffSessionCookie } from "@/lib/staff-session";
+import { STAFF_SESSION_COOKIE } from "@/lib/staff-session";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
 // Stats are read from the database on every request — never prerender or
@@ -11,8 +12,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const shop = await getShop();
-  const sessionCookie = cookies().get(STAFF_SESSION_COOKIE)?.value;
-  if (!verifyStaffSessionCookie(sessionCookie, shop.id)) {
+  const staffSessionCookie = cookies().get(STAFF_SESSION_COOKIE)?.value;
+  if (!(await isAuthorizedForShopSettings(shop, staffSessionCookie))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
