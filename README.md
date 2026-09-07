@@ -154,10 +154,11 @@ enabled:
 
 ## Known limitations (by design, for this MVP)
 
-- **Single café per deployment.** No multi-tenant signup or billing — see
-  the "Scope recommendation" in this repo's plan history if that becomes a
-  goal; the schema (`shop_id` on every table) was built to make that an
-  additive change later, not a rewrite.
+- **Single café per deployment.** No multi-tenant signup or billing — the
+  schema (`shop_id` on every table, plus an optional `slug` column) and
+  `middleware.ts` are scaffolding for a future hosted multi-tenant mode, but
+  it's inert unless `APP_ROOT_DOMAIN` is set — a normal deployment leaves it
+  unset and this is a no-op.
 - **No PIN-recovery UI** — see [Day-2 operations](#day-2-operations) above.
 - **No rate limiting on card creation** (`POST /api/cards` is public and
   unauthenticated, same trust model as the QR code itself). Low risk for a

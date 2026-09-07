@@ -33,6 +33,13 @@ alter table shops add column if not exists pin_locked_until timestamptz;
 -- metric. Safe to re-run even if cards already exists.
 alter table cards add column if not exists lifetime_stamps int not null default 0;
 
+-- Multi-tenant scaffolding (inert for a single-café deployment): a shop can
+-- optionally have a slug, used to resolve which shop a request is for when
+-- multiple shops are served from one deployment (see middleware.ts). Left
+-- null and unused by every single-café (Model A) deployment.
+alter table shops add column if not exists slug text;
+create unique index if not exists shops_slug_idx on shops(slug) where slug is not null;
+
 -- Seed the single shop this MVP operates. Change the PIN before going live.
 -- crypt(..., gen_salt('bf')) produces a standard bcrypt hash ($2a$/$2b$
 -- prefixed) via pgcrypto. pgcrypto's bcrypt implementation is wire-compatible

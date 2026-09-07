@@ -24,6 +24,13 @@ export async function POST(_request: Request, { params }: { params: { id: string
   if (fetchError || !existing) {
     return NextResponse.json({ error: "Card not found" }, { status: 404 });
   }
+  // Staff can only stamp cards belonging to the shop they're signed into —
+  // matters once more than one shop exists behind the same deployment.
+  // Report the same "not found" a nonexistent card would, rather than
+  // confirming the card exists under a different shop.
+  if (existing.shop_id !== shop.id) {
+    return NextResponse.json({ error: "Card not found" }, { status: 404 });
+  }
 
   const { stamps_earned, redemptions } = applyStamp(existing);
 
