@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from "./supabase";
 
 const SHOP_SLUG_HEADER = "x-shop-slug";
 const SHOP_COLUMNS =
-  "id, name, stamps_required, staff_pin_hash, failed_pin_attempts, pin_locked_until, owner_user_id";
+  "id, name, stamps_required, staff_pin_hash, failed_pin_attempts, pin_locked_until, owner_user_id, slug";
 
 export type Shop = {
   id: string;
@@ -13,7 +13,30 @@ export type Shop = {
   failedPinAttempts: number;
   pinLockedUntil: string | null;
   ownerUserId: string | null;
+  slug: string | null;
 };
+
+function toShop(data: {
+  id: string;
+  name: string;
+  stamps_required: number;
+  staff_pin_hash: string;
+  failed_pin_attempts: number;
+  pin_locked_until: string | null;
+  owner_user_id: string | null;
+  slug: string | null;
+}): Shop {
+  return {
+    id: data.id,
+    name: data.name,
+    stampsRequired: data.stamps_required,
+    staffPinHash: data.staff_pin_hash,
+    failedPinAttempts: data.failed_pin_attempts,
+    pinLockedUntil: data.pin_locked_until,
+    ownerUserId: data.owner_user_id,
+    slug: data.slug,
+  };
+}
 
 const MAX_FAILED_PIN_ATTEMPTS = 5;
 const PIN_LOCKOUT_MS = 5 * 60 * 1000;
@@ -48,15 +71,22 @@ export async function getShop(): Promise<Shop> {
     throw new Error(`Failed to load shop: ${error?.message ?? "no shop row found"}`);
   }
 
-  return {
-    id: data.id,
-    name: data.name,
-    stampsRequired: data.stamps_required,
-    staffPinHash: data.staff_pin_hash,
-    failedPinAttempts: data.failed_pin_attempts,
-    pinLockedUntil: data.pin_locked_until,
-    ownerUserId: data.owner_user_id,
-  };
+  return toShop(data);
+}
+
+// Used by /owner/onboarding to check whether a signed-in owner already has
+// a shop — a missing row is an expected outcome here (a brand-new owner
+// account), not an error, unlike getShop().
+export async function getShopByOwnerUserId(ownerUserId: string): Promise<Shop | null> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("shops")
+    .select(SHOP_COLUMNS)
+    .eq("owner_user_id", ownerUserId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return toShop(data);
 }
 
 export function isPinLocked(shop: Shop): boolean {

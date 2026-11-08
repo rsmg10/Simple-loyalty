@@ -19,6 +19,7 @@ function makeShop(overrides: Partial<Shop> = {}): Shop {
     failedPinAttempts: 0,
     pinLockedUntil: null,
     ownerUserId: null,
+    slug: null,
     ...overrides,
   };
 }

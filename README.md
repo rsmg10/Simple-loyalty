@@ -153,16 +153,21 @@ enabled:
   is the code printed under their QR code.
 - **Owner authentication.** Optional and opt-in per shop — set
   `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` (see
-  `.env.local.example`), have the owner create an account at `/owner/signup`,
-  then link it to their shop directly in Supabase SQL editor (there's no
-  self-serve "create my shop" flow yet):
-  ```sql
-  update shops set owner_user_id = '<the auth.users.id from Supabase Auth>' where id = '...';
-  ```
+  `.env.local.example`), have the owner create an account at `/owner/signup`.
   Once linked, `/setup` requires that owner's login instead of the staff
   PIN — the staff PIN keeps working at `/staff` either way, unaffected.
   Leave `owner_user_id` null (the default) to keep using the staff PIN for
   `/setup` too, exactly as before this existed.
+  - **Multi-tenant deployment** (`APP_ROOT_DOMAIN`/`NEXT_PUBLIC_APP_ROOT_DOMAIN`
+    also set): signing up routes through `/owner/onboarding` automatically —
+    the owner picks a shop name and subdomain there and a shop is created
+    and linked for them, no SQL needed.
+  - **Single-café deployment** using owner auth without multi-tenancy
+    (`APP_ROOT_DOMAIN` unset): there's no onboarding flow, so link the one
+    existing shop to the new account directly in Supabase SQL editor:
+    ```sql
+    update shops set owner_user_id = '<the auth.users.id from Supabase Auth>' where id = '...';
+    ```
 
 ## Known limitations (by design, for this MVP)
 

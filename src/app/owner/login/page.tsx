@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { postAuthRedirectPath } from "@/lib/owner-auth-config";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export default function OwnerLoginPage() {
@@ -25,7 +26,7 @@ export default function OwnerLoginPage() {
       return;
     }
 
-    router.push("/setup");
+    router.push(postAuthRedirectPath());
     router.refresh();
   }
 

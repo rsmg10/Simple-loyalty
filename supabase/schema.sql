@@ -46,6 +46,12 @@ create unique index if not exists shops_slug_idx on shops(slug) where slug is no
 -- stay gated by the staff PIN exactly as today. See src/lib/shop-auth.ts.
 alter table shops add column if not exists owner_user_id uuid;
 
+-- One shop per owner account — self-serve onboarding (src/app/api/onboarding)
+-- checks this before inserting, but a unique index closes the race a
+-- double-submit could otherwise slip through. Partial for the same reason
+-- as the slug index: never applies to a shop without an owner.
+create unique index if not exists shops_owner_user_id_idx on shops(owner_user_id) where owner_user_id is not null;
+
 -- Seed the single shop this MVP operates. Change the PIN before going live.
 -- crypt(..., gen_salt('bf')) produces a standard bcrypt hash ($2a$/$2b$
 -- prefixed) via pgcrypto. pgcrypto's bcrypt implementation is wire-compatible

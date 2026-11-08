@@ -19,6 +19,13 @@ function getServerClient() {
         }
       },
     },
+    // Scopes the session cookie to the whole domain tree (root + every shop
+    // subdomain) once APP_ROOT_DOMAIN is set, so an owner who signs in on
+    // the root domain (e.g. during onboarding) stays signed in after being
+    // redirected to their shop's own subdomain. `domain: undefined` omits
+    // the attribute entirely — a no-op wherever this isn't set, matching
+    // slice 2's original single-host-scoped cookie behavior exactly.
+    cookieOptions: { domain: process.env.APP_ROOT_DOMAIN ? `.${process.env.APP_ROOT_DOMAIN}` : undefined },
   });
 }
 

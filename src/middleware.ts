@@ -37,6 +37,9 @@ export async function middleware(request: NextRequest) {
             cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
           },
         },
+        // Must match src/lib/owner-auth.ts and src/lib/supabase-browser.ts
+        // exactly — see the comment there.
+        cookieOptions: { domain: process.env.APP_ROOT_DOMAIN ? `.${process.env.APP_ROOT_DOMAIN}` : undefined },
       },
     );
     await supabase.auth.getUser();

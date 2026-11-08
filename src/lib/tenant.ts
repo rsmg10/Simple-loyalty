@@ -20,3 +20,25 @@ export function resolveShopSlug(host: string, rootDomain: string | undefined): s
 
   return label;
 }
+
+const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/;
+// "www" is rejected because resolveShopSlug() above treats www.<root> as no
+// tenant — a shop claiming it could never actually be reached.
+const RESERVED_SLUGS = new Set(["www"]);
+
+export function isValidSlug(slug: string): boolean {
+  return SLUG_PATTERN.test(slug) && !RESERVED_SLUGS.has(slug);
+}
+
+// Best-effort suggestion for a signup form's slug field, not a validator —
+// isValidSlug() is the actual gate. The caller should still let the owner
+// edit the result.
+export function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 63)
+    .replace(/-+$/, "");
+}
