@@ -17,6 +17,10 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   }
 
   const shop = await getShop();
+  if (card.shop_id !== shop.id) {
+    return NextResponse.json({ error: "Card not found" }, { status: 404 });
+  }
+
   const buffer = await generateApplePass({
     cardId: card.id,
     stampsEarned: card.stamps_earned,

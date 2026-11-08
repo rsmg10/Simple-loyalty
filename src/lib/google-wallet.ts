@@ -3,6 +3,7 @@ import { JWT } from "google-auth-library";
 
 export type GoogleWalletCardInput = {
   cardId: string;
+  shopId: string;
   stampsEarned: number;
   stampsRequired: number;
   shopName: string;
@@ -33,22 +34,41 @@ export function isGoogleWalletConfigured(): boolean {
   return readEnv() !== null;
 }
 
-// Single-shop MVP — one loyalty class for the one seeded shop. Keep this in
-// sync with scripts/setup-google-wallet-class.mjs, which provisions the
-// class this id points at.
-export function googleWalletClassId(issuerId: string): string {
-  return `${issuerId}.loyalty_class`;
+// Ids may only contain alphanumeric characters, '.', '_', '-'.
+function sanitizeIdPart(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]/g, "");
+}
+
+// One loyalty class per shop, so each shop's passes carry its own name.
+// Classes are created on demand by ensureGoogleWalletClass().
+export function googleWalletClassId(issuerId: string, shopId: string): string {
+  return `${issuerId}.shop_${sanitizeIdPart(shopId)}`;
 }
 
 export function googleWalletObjectId(issuerId: string, cardId: string): string {
-  // Object ids may only contain alphanumeric characters, '.', '_', '-'.
-  return `${issuerId}.card_${cardId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  return `${issuerId}.card_${sanitizeIdPart(cardId)}`;
+}
+
+export function buildLoyaltyClass(
+  env: Pick<GoogleWalletEnv, "issuerId">,
+  shop: { shopId: string; shopName: string },
+  appUrl: string | undefined,
+) {
+  return {
+    id: googleWalletClassId(env.issuerId, shop.shopId),
+    issuerName: shop.shopName,
+    programName: `${shop.shopName} Loyalty Card`,
+    hexBackgroundColor: "#0a0a0a",
+    // Shared placeholder logo (public/wallet/google-logo.png) for every shop
+    // for now; Google fetches it from this public URL.
+    programLogo: { sourceUri: { uri: `${appUrl ?? ""}/wallet/google-logo.png` } },
+  };
 }
 
 function buildLoyaltyObject(env: GoogleWalletEnv, input: GoogleWalletCardInput) {
   return {
     id: googleWalletObjectId(env.issuerId, input.cardId),
-    classId: googleWalletClassId(env.issuerId),
+    classId: googleWalletClassId(env.issuerId, input.shopId),
     state: "ACTIVE",
     accountId: input.cardId,
     accountName: input.shopName,
@@ -65,9 +85,10 @@ function base64url(value: object): string {
 }
 
 // The object is embedded directly in the JWT (not just referenced by id) so
-// that clicking "Add to Google Wallet" works even before upsertGoogleWalletObject
-// has ever run for this card — Google creates the object from the JWT
-// payload on first save.
+// that clicking "Add to Google Wallet" works for a card whose pass has never
+// been created — Google creates the object from the JWT payload on first
+// save. The shop's class must already exist: call ensureGoogleWalletClass()
+// first.
 export async function getGoogleWalletSaveUrl(input: GoogleWalletCardInput): Promise<string> {
   const env = readEnv();
   if (!env) throw new Error("Google Wallet is not configured");
@@ -90,36 +111,78 @@ export async function getGoogleWalletSaveUrl(input: GoogleWalletCardInput): Prom
   return `https://pay.google.com/gp/v/save/${signingInput}.${signature}`;
 }
 
+function getClient(env: GoogleWalletEnv) {
+  return new JWT({ email: env.serviceAccountEmail, key: env.privateKey, scopes: [WALLET_SCOPE] });
+}
+
+// classId -> shop name it was last confirmed with. Per server instance, so a
+// cold start re-checks once; a changed shop name is picked up the next time.
+const ensuredClasses = new Map<string, string>();
+
+// Makes sure this shop's loyalty class exists (and carries the shop's
+// current name), creating it on first use. This replaces a manual
+// per-shop provisioning step: a shop gets its class the first time a
+// customer taps "Add to Google Wallet".
+//
+// New classes start UNDER_REVIEW; while the issuer is in demo mode only
+// test users can save passes regardless. Existing classes are never sent a
+// reviewStatus, so an already-approved class isn't pushed back into review.
+export async function ensureGoogleWalletClass(shop: { shopId: string; shopName: string }): Promise<void> {
+  const env = readEnv();
+  if (!env) return;
+
+  const desired = buildLoyaltyClass(env, shop, process.env.NEXT_PUBLIC_APP_URL);
+  if (ensuredClasses.get(desired.id) === shop.shopName) return;
+
+  const client = getClient(env);
+  const url = `${WALLET_API_BASE}/loyaltyClass/${desired.id}`;
+
+  let existing: { issuerName?: string; programName?: string };
+  try {
+    existing = (await client.request<{ issuerName?: string; programName?: string }>({ url, method: "GET" })).data;
+  } catch (error) {
+    if (!isNotFound(error)) throw error;
+    await client.request({
+      url: `${WALLET_API_BASE}/loyaltyClass`,
+      method: "POST",
+      data: { ...desired, reviewStatus: "UNDER_REVIEW" },
+    });
+    ensuredClasses.set(desired.id, shop.shopName);
+    return;
+  }
+
+  if (existing.issuerName !== desired.issuerName || existing.programName !== desired.programName) {
+    await client.request({
+      url,
+      method: "PATCH",
+      data: { issuerName: desired.issuerName, programName: desired.programName },
+    });
+  }
+  ensuredClasses.set(desired.id, shop.shopName);
+}
+
 // Fire-and-forget from the stamp route, same as the reminder email — a
 // customer who added the pass sees their stamp count update live (Google
 // hosts pass state, unlike Apple's static v1 pass) but a failure here must
 // never block the staff-facing stamp action.
-export async function upsertGoogleWalletObject(input: GoogleWalletCardInput): Promise<void> {
+//
+// Update-only: a 404 means this customer never added the pass, so there is
+// nothing to update (and nothing should be created — the save link's JWT
+// creates the object if and when they do add it).
+export async function updateGoogleWalletObject(input: GoogleWalletCardInput): Promise<void> {
   const env = readEnv();
   if (!env) return;
 
-  const client = new JWT({
-    email: env.serviceAccountEmail,
-    key: env.privateKey,
-    scopes: [WALLET_SCOPE],
-  });
   const loyaltyObject = buildLoyaltyObject(env, input);
 
   try {
-    await client.request({
+    await getClient(env).request({
       url: `${WALLET_API_BASE}/loyaltyObject/${loyaltyObject.id}`,
       method: "PATCH",
       data: loyaltyObject,
     });
   } catch (error) {
     if (!isNotFound(error)) throw error;
-    // Object doesn't exist yet — this is the card's first stamp since the
-    // shop's Wallet integration was configured. Create it instead.
-    await client.request({
-      url: `${WALLET_API_BASE}/loyaltyObject`,
-      method: "POST",
-      data: loyaltyObject,
-    });
   }
 }
 

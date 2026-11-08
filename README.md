@@ -35,7 +35,9 @@ second copy with its own Supabase project.
      link in reminder emails.
    - `RESEND_API_KEY` — optional. Without it, the app still works; it just
      skips sending the "1 stamp away" reminder email (logs a warning
-     instead of failing).
+     instead of failing). Also set `EMAIL_FROM_ADDRESS` (and, for US
+     recipients, `EMAIL_MAILING_ADDRESS`) before launch — see the
+     [pre-launch checklist](#pre-launch-checklist).
 4. **Deploy** (`vercel deploy` or connect the repo in the Vercel dashboard).
 5. Go through the [pre-launch checklist](#pre-launch-checklist) below before
    handing it to the café.
@@ -78,15 +80,24 @@ Wallet" buttons simply don't appear.
    (looks like `pass.com.yourcafe.loyalty`).
 2. Your **Team ID** (top-right of the Apple Developer account page) becomes
    `APPLE_TEAM_IDENTIFIER`.
-3. Create a certificate for that Pass Type ID, download it, and export it
-   from Keychain Access as a `.p12` file (set a password when prompted — that
-   password is `APPLE_PASS_SIGNER_KEY_PASSPHRASE`). Then, with OpenSSL:
+3. Create the signing certificate (no Mac needed). Generate a key and a
+   certificate signing request with OpenSSL:
    ```bash
-   openssl pkcs12 -in Certificates.p12 -clcerts -nokeys -out cert.pem -passin pass:<your .p12 password>
-   openssl pkcs12 -in Certificates.p12 -nocerts -out key.pem -passin pass:<your .p12 password> -passout pass:<your .p12 password>
-   base64 -w0 cert.pem   # → APPLE_PASS_SIGNER_CERT_BASE64
-   base64 -w0 key.pem    # → APPLE_PASS_SIGNER_KEY_BASE64
+   openssl req -new -newkey rsa:2048 -nodes -keyout pass-key.pem -out pass.csr \
+     -subj "/CN=Pass Type ID/O=Your Name"
    ```
+   Upload `pass.csr` in the Pass Type ID's "Create Certificate" step,
+   download the resulting `.cer`, then:
+   ```bash
+   openssl x509 -inform DER -in pass.cer -out pass-cert.pem
+   base64 -w0 pass-cert.pem   # → APPLE_PASS_SIGNER_CERT_BASE64
+   base64 -w0 pass-key.pem    # → APPLE_PASS_SIGNER_KEY_BASE64
+   ```
+   The key has no passphrase (`-nodes`), so leave
+   `APPLE_PASS_SIGNER_KEY_PASSPHRASE` unset. Keep `pass-key.pem` out of git
+   (`*.pem` is already ignored) and in a password manager. (If you already
+   have a `.p12` from Keychain Access, extract the cert and key from it with
+   `openssl pkcs12` instead and set the passphrase accordingly.)
 4. The WWDR intermediate certificate is already bundled in this repo
    ([`certs/AppleWWDRCAG4.pem`](certs/AppleWWDRCAG4.pem)) — nothing to do
    there unless Apple rotates it (see the comment in that file).
@@ -104,29 +115,36 @@ enabled:
 1. Request Wallet API access and get your **Issuer ID** from the
    [Google Pay & Wallet Console](https://pay.google.com/business/console) —
    this becomes `GOOGLE_WALLET_ISSUER_ID`.
-2. Create a service account with the "Wallet Object Issuer" role, download
-   its JSON key. `GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL` is the key's
-   `client_email`; `GOOGLE_WALLET_SERVICE_ACCOUNT_KEY` is its `private_key`
-   (paste it as-is — literal `\n` escapes in the value are handled
-   automatically).
-3. Run the one-off class-provisioning script once, after the env vars above
-   are set:
-   ```bash
-   node --env-file=.env.local scripts/setup-google-wallet-class.mjs "Your Cafe Name"
-   ```
-   A newly-created class starts in Google's `UNDER_REVIEW` state — Google
-   must approve it (a manual review on their end) before passes are visible
-   to real customers outside your own test Google account.
+2. In Google Cloud, enable the Google Wallet API, create a service account
+   and download its JSON key. `GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL` is the
+   key's `client_email`; `GOOGLE_WALLET_SERVICE_ACCOUNT_KEY` is its
+   `private_key` (paste it as-is — literal `\n` escapes in the value are
+   handled automatically).
+3. **Authorize the service account in the Wallet console** (Users → invite
+   the service account's email). Skipping this is the most common cause of
+   401/403 errors from the Wallet API. Because the stamp-time pass update is
+   fire-and-forget, the failure only shows up in the server logs.
+4. While your issuer is in demo mode, add your own Google accounts as test
+   users in the Wallet console — only they can save passes until Google
+   approves your account.
+
+There is no per-shop provisioning step: each shop's loyalty class is created
+automatically the first time a customer taps "Add to Google Wallet" (and
+renamed automatically if the shop is renamed). New classes start in Google's
+`UNDER_REVIEW` state; Google must approve them before passes are visible to
+customers outside your test users.
 
 ## Pre-launch checklist
 
 - [ ] Change the staff PIN from the seeded `1234` — visit `/setup`, unlock
       with `1234`, set a new one.
 - [ ] Set the real shop name and stamps-required on the same `/setup` page.
-- [ ] If you'll be sending reminder emails to real customers in the US, add
-      your business's physical mailing address to the email footer in
-      [`src/lib/email.ts`](src/lib/email.ts) — CAN-SPAM requires it, and it
-      isn't something the app can infer, so it's left as a manual edit.
+- [ ] Reminder emails: verify a sending domain in Resend and set
+      `EMAIL_FROM_ADDRESS` to an address on it. Without it the app falls back
+      to Resend's sandbox sender, which only delivers to your own Resend
+      account email and logs a warning. If you email US customers, also set
+      `EMAIL_MAILING_ADDRESS` to your business's physical address (CAN-SPAM
+      requires it in the footer).
 - [ ] Point an uptime monitor (UptimeRobot, Vercel's own, etc.) at
       `GET /api/health` — returns `200` when the app can reach the
       database, `503` otherwise.
