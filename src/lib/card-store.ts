@@ -137,8 +137,13 @@ export function useOwnCard(options?: { confirmReplace?: () => boolean }): {
   const refresh = useCallback(async () => {
     const id = cardIdRef.current;
     if (!id) return;
-    const latest = await fetchCard(id);
-    if (latest) setCard(latest);
+    try {
+      const latest = await fetchCard(id);
+      if (latest) setCard(latest);
+    } catch {
+      // Offline or a dropped connection — keep showing the last known card;
+      // the next poll tries again.
+    }
   }, []);
 
   useEffect(() => {

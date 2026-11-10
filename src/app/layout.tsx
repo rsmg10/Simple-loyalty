@@ -19,9 +19,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: `${shop.name} — ${meta.titleSuffix}`,
     description: meta.description,
+    // No `manifest` here on purpose: the card page adds its own,
+    // card-specific one (see HomeScreenPrompt), and staff/setup pages are
+    // better saved as plain shortcuts to themselves.
     icons: {
       icon: "/icon.svg",
-      apple: "/icon.svg",
+      apple: "/apple-touch-icon.png",
     },
     appleWebApp: {
       capable: true,

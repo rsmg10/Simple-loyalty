@@ -1,6 +1,7 @@
 import CardQRCode from "./CardQRCode";
 import Confetti from "./Confetti";
 import EmailReminderOptIn from "./EmailReminderOptIn";
+import HomeScreenPrompt from "./HomeScreenPrompt";
 import { useI18n } from "./I18nProvider";
 import PhoneOptIn from "./PhoneOptIn";
 import ProgressBar from "./ProgressBar";
@@ -15,6 +16,7 @@ type Shop = {
 type Card = {
   stampsEarned: number;
   stampsRequired: number;
+  redemptions: number;
   email?: string;
   phoneHint?: string;
 };
@@ -67,6 +69,8 @@ export default function LoyaltyCard({
           {t.card.showToStaff}
         </p>
       </div>
+
+      <HomeScreenPrompt cardId={cardId} eligible={stampsEarned > 0 || card.redemptions > 0} />
 
       <div className="mt-lg">
         <StampGrid

@@ -103,6 +103,22 @@ first-time visitor sees; a toggle at the bottom of each page switches it,
 and the choice is remembered on that device (a `locale` cookie). Owner
 sign-up/login/onboarding pages and reminder emails are English-only for now.
 
+## Home screen
+
+After a customer's first stamp, the card suggests saving it to the home
+screen: a one-tap "Add" on Android Chrome, Share-menu instructions on
+iPhone, browser-menu instructions on other Android browsers, and "open in
+Chrome or Safari" inside Facebook/Instagram's in-app browser (which can't
+install anything). Dismissing it is remembered on that device.
+
+The card page serves a card-specific manifest
+(`/manifest.webmanifest?card=<id>`), so the home-screen icon opens that
+customer's card. This matters on iPhone, where a home-screen web app gets
+storage separate from Safari and would otherwise start a blank card.
+Icons are generated from `public/icon.svg` by
+`node scripts/generate-app-icons.mjs`; replace the SVG with the café's logo
+and re-run it.
+
 ## Dashboard and customer list
 
 `/setup` shows, besides the totals:

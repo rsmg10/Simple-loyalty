@@ -41,6 +41,15 @@ const en = {
     halfway: (remaining: number) => `Halfway there! ${remaining} more stamps until your next coffee is free.`,
     more: (remaining: number) => `${remaining} more stamps until your next coffee is free.`,
   },
+  install: {
+    title: "Keep your card one tap away",
+    native: "Add it to your home screen so it's easy to find next visit.",
+    ios: "Tap the Share button, then “Add to Home Screen”.",
+    androidManual: "Open your browser menu (⋮), then “Add to Home screen”.",
+    inApp: "Open this page in Chrome or Safari to save it to your home screen.",
+    add: "Add to home screen",
+    dismiss: "Not now",
+  },
   phone: {
     placeholder: "Phone number (optional)",
     hint: "So staff can find your card if you change phones. The café may also message you about rewards.",
@@ -180,6 +189,15 @@ const ar: Messages = {
     start: (remaining) => `تبقّى ${pluralStampsAr(remaining)} على قهوتك المجانية القادمة.`,
     halfway: (remaining) => `وصلت إلى المنتصف! تبقّى ${pluralStampsAr(remaining)} على قهوتك المجانية القادمة.`,
     more: (remaining) => `تبقّى ${pluralStampsAr(remaining)} على قهوتك المجانية القادمة.`,
+  },
+  install: {
+    title: "اجعل بطاقتك على بُعد لمسة",
+    native: "أضِفها إلى الشاشة الرئيسية لتجدها بسهولة في زيارتك القادمة.",
+    ios: "اضغط زر المشاركة، ثم «إضافة إلى الشاشة الرئيسية».",
+    androidManual: "افتح قائمة المتصفح (⋮)، ثم «إضافة إلى الشاشة الرئيسية».",
+    inApp: "افتح هذه الصفحة في Chrome أو Safari لحفظها على الشاشة الرئيسية.",
+    add: "أضِف إلى الشاشة الرئيسية",
+    dismiss: "ليس الآن",
   },
   phone: {
     placeholder: "رقم الهاتف (اختياري)",
