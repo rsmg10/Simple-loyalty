@@ -34,8 +34,12 @@ export async function getCard(cardId: string): Promise<CardRecord | null> {
   return fetchCard(cardId);
 }
 
-export async function addStamp(cardId: string): Promise<CardRecord | null> {
-  const res = await fetch(`/api/cards/${cardId}/stamp`, { method: "POST" });
+export async function addStamps(cardId: string, count: number): Promise<CardRecord | null> {
+  const res = await fetch(`/api/cards/${cardId}/stamp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ count }),
+  });
   if (!res.ok) return null;
   return res.json();
 }
@@ -160,6 +164,22 @@ export function useOwnCard(options?: { confirmReplace?: () => boolean }): {
           }
         }
 
+        if (id && !initialCard) {
+          const res = await fetch(`/api/cards/${id}`);
+          if (cancelled) return;
+          if (res.ok) {
+            initialCard = (await res.json()) as CardRecord;
+          } else if (res.status === 404) {
+            // The stored card no longer exists (deleted on request, or a
+            // reset database) — start a fresh card rather than leaving the
+            // customer on an error that Retry can never fix.
+            window.localStorage.removeItem(CARD_ID_KEY);
+            id = null;
+          } else {
+            throw new Error("Failed to load card");
+          }
+        }
+
         if (!id) {
           const res = await fetch("/api/cards", { method: "POST" });
           if (!res.ok) throw new Error("Failed to create card");
@@ -172,10 +192,8 @@ export function useOwnCard(options?: { confirmReplace?: () => boolean }): {
         cardIdRef.current = id;
         setCardId(id);
 
-        const latest = initialCard ?? (await fetchCard(id));
-        if (cancelled) return;
-        if (!latest) throw new Error("Failed to load card");
-        setCard(latest);
+        if (!initialCard) throw new Error("Failed to load card");
+        setCard(initialCard);
       } catch {
         if (!cancelled) setLoadError(true);
       }

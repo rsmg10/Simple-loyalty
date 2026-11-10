@@ -59,6 +59,15 @@ export default function LoyaltyCard({
         {shop.name}
       </h1>
 
+      {/* The QR is what customers need at the counter, so it sits above the
+          fold — stamps, opt-ins and the typed-code fallback come after. */}
+      <div className="mt-md">
+        <CardQRCode value={cardId} size={176} label={t.card.qrLabel} />
+        <p className="mt-xs text-center text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted">
+          {t.card.showToStaff}
+        </p>
+      </div>
+
       <div className="mt-lg">
         <StampGrid
           stampsEarned={stampsEarned}
@@ -99,16 +108,8 @@ export default function LoyaltyCard({
         />
       </div>
 
-      <div className="mt-lg border-t border-hairline pt-lg">
-        <p className="text-center text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted">
-          {t.card.showToStaff}
-        </p>
-        <div className="mt-sm">
-          <CardQRCode value={cardId} label={t.card.qrLabel} />
-        </div>
-        <p className="mt-sm text-center text-body-sm text-muted">
-          {t.card.noCamera}
-        </p>
+      <div className="mt-lg border-t border-hairline pt-md">
+        <p className="text-center text-body-sm text-muted">{t.card.noCamera}</p>
         <p dir="ltr" className="mt-xxs select-all break-all text-center font-mono text-body-sm text-ink">
           {cardId}
         </p>

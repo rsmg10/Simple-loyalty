@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyStamp, toCardJson } from "./card-json";
+import { applyStamp, applyStamps, toCardJson } from "./card-json";
 
 describe("applyStamp", () => {
   it("increments stamps without touching redemptions below the threshold", () => {
@@ -19,6 +19,35 @@ describe("applyStamp", () => {
     }
     // 9 stamps over a 3-stamp card = exactly 3 completed redemptions, back at 0.
     expect(card).toMatchObject({ stamps_earned: 0, redemptions: 3 });
+  });
+});
+
+describe("applyStamps", () => {
+  it("adds several stamps below the threshold", () => {
+    expect(applyStamps({ stamps_earned: 2, stamps_required: 9, redemptions: 0 }, 3)).toEqual({
+      stamps_earned: 5,
+      redemptions: 0,
+    });
+  });
+
+  it("completes the card and carries the rest onto the next one", () => {
+    // 8/9 + 3: the first stamp completes the card, two carry over.
+    expect(applyStamps({ stamps_earned: 8, stamps_required: 9, redemptions: 1 }, 3)).toEqual({
+      stamps_earned: 2,
+      redemptions: 2,
+    });
+  });
+
+  it("can complete more than one card in a single purchase", () => {
+    expect(applyStamps({ stamps_earned: 2, stamps_required: 3, redemptions: 0 }, 7)).toEqual({
+      stamps_earned: 0,
+      redemptions: 3,
+    });
+  });
+
+  it("matches applyStamp for a single stamp", () => {
+    const card = { stamps_earned: 8, stamps_required: 9, redemptions: 0 };
+    expect(applyStamps(card, 1)).toEqual(applyStamp(card));
   });
 });
 

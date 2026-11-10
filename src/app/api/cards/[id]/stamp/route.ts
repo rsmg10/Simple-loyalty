@@ -1,17 +1,28 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { applyStamp, toCardJson } from "@/lib/card-json";
+import { MAX_STAMPS_PER_PURCHASE, applyStamps, toCardJson } from "@/lib/card-json";
 import { sendStampReminderEmail } from "@/lib/email";
 import { updateGoogleWalletObject } from "@/lib/google-wallet";
+import { parseJsonBody } from "@/lib/parse-json-body";
 import { getShop } from "@/lib/shop-repo";
 import { STAFF_SESSION_COOKIE, verifyStaffSessionCookie } from "@/lib/staff-session";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
-export async function POST(_request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: { id: string } }) {
   const shop = await getShop();
   const sessionCookie = cookies().get(STAFF_SESSION_COOKIE)?.value;
   if (!verifyStaffSessionCookie(sessionCookie, shop.id)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // `count` is optional — no body means one stamp, as before.
+  const body = await parseJsonBody<{ count?: unknown }>(request);
+  const count = body?.count ?? 1;
+  if (typeof count !== "number" || !Number.isInteger(count) || count < 1 || count > MAX_STAMPS_PER_PURCHASE) {
+    return NextResponse.json(
+      { error: `count must be a whole number from 1 to ${MAX_STAMPS_PER_PURCHASE}` },
+      { status: 400 },
+    );
   }
 
   const supabase = getSupabaseAdmin();
@@ -32,14 +43,14 @@ export async function POST(_request: Request, { params }: { params: { id: string
     return NextResponse.json({ error: "Card not found" }, { status: 404 });
   }
 
-  const { stamps_earned, redemptions } = applyStamp(existing);
+  const { stamps_earned, redemptions } = applyStamps(existing, count);
 
   const { data: updated, error: updateError } = await supabase
     .from("cards")
     .update({
       stamps_earned,
       redemptions,
-      lifetime_stamps: existing.lifetime_stamps + 1,
+      lifetime_stamps: existing.lifetime_stamps + count,
       last_stamped_at: new Date().toISOString(),
     })
     .eq("id", params.id)

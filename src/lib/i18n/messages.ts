@@ -83,10 +83,14 @@ const en = {
     tryAgain: "Try again",
     confirmTitle: "Add a stamp?",
     cancel: "Cancel",
-    addStamp: "Add stamp",
-    stampAdded: "Stamp added",
+    stampCount: "Stamps for this purchase",
+    fewerStamps: "One stamp fewer",
+    moreStamps: "One stamp more",
+    addStamps: (count: number) => (count === 1 ? "Add stamp" : `Add ${count} stamps`),
+    stampsAdded: (count: number) => (count === 1 ? "Stamp added" : `${count} stamps added`),
     rewardRedeemed: "Free coffee redeemed!",
-    giveReward: "🎁 Give them a free coffee!",
+    giveRewards: (count: number) =>
+      count === 1 ? "🎁 Give them a free coffee!" : `🎁 Give them ${count} free coffees!`,
     scanNext: "Scan next customer",
     moveCard: "Move card to customer's phone",
     moveCardHint: "Ask the customer to scan this with their phone camera.",
@@ -218,10 +222,21 @@ const ar: Messages = {
     tryAgain: "حاول مرة أخرى",
     confirmTitle: "إضافة ختم؟",
     cancel: "إلغاء",
-    addStamp: "أضِف ختمًا",
-    stampAdded: "تمت إضافة الختم",
+    stampCount: "عدد الأختام لهذا الطلب",
+    fewerStamps: "ختم أقل",
+    moreStamps: "ختم أكثر",
+    // After a verb the dual takes its accusative form (ختمين, not ختمان).
+    addStamps: (count) =>
+      count === 1 ? "أضِف ختمًا" : count === 2 ? "أضِف ختمين" : `أضِف ${pluralStampsAr(count)}`,
+    stampsAdded: (count) =>
+      count === 1 ? "تمت إضافة الختم" : count === 2 ? "تمت إضافة ختمين" : `تمت إضافة ${pluralStampsAr(count)}`,
     rewardRedeemed: "تم استبدال القهوة المجانية!",
-    giveReward: "🎁 قدّم له قهوة مجانية!",
+    giveRewards: (count) =>
+      count === 1
+        ? "🎁 قدّم له قهوة مجانية!"
+        : count === 2
+          ? "🎁 قدّم له قهوتين مجانيتين!"
+          : `🎁 قدّم له ${count} قهوات مجانية!`,
     scanNext: "الزبون التالي",
     moveCard: "انقل البطاقة إلى هاتف الزبون",
     moveCardHint: "اطلب من الزبون مسح هذا الرمز بكاميرا هاتفه.",

@@ -53,3 +53,20 @@ export function applyStamp(card: {
 
   return { stamps_earned: stampsEarned, redemptions };
 }
+
+// Upper bound on stamps in one go — a big order, not a typo'd "100".
+export const MAX_STAMPS_PER_PURCHASE = 10;
+
+// Several stamps from one purchase, applied one at a time so a purchase that
+// crosses the threshold completes the card and carries the rest onto the
+// next one (8/9 + 3 stamps = 1 redemption, then 2/9).
+export function applyStamps(
+  card: { stamps_earned: number; stamps_required: number; redemptions: number },
+  count: number,
+): { stamps_earned: number; redemptions: number } {
+  let result = { stamps_earned: card.stamps_earned, redemptions: card.redemptions };
+  for (let i = 0; i < count; i++) {
+    result = applyStamp({ ...result, stamps_required: card.stamps_required });
+  }
+  return result;
+}

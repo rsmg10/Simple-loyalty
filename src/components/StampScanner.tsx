@@ -5,9 +5,10 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import CardQRCode from "./CardQRCode";
 import Confetti from "./Confetti";
 import { useI18n } from "./I18nProvider";
+import { MAX_STAMPS_PER_PURCHASE } from "@/lib/card-json";
 import {
   SHARED_CARD_PARAM,
-  addStamp,
+  addStamps,
   getCard,
   isCardId,
   lookupCardByPhone,
@@ -19,8 +20,9 @@ type ScanState =
   | { status: "not-found" }
   // `manual` = found from a typed number/code, i.e. the customer probably
   // doesn't have the card on the phone in front of them — offer to move it.
-  | { status: "confirm"; cardId: string; card: CardRecord; manual: boolean }
-  | { status: "success"; card: CardRecord; redeemed: boolean };
+  // `count` = stamps for this purchase (several coffees, one scan).
+  | { status: "confirm"; cardId: string; card: CardRecord; manual: boolean; count: number }
+  | { status: "success"; card: CardRecord; added: number; rewards: number };
 
 export default function StampScanner() {
   const { t } = useI18n();
@@ -41,7 +43,7 @@ export default function StampScanner() {
       setState({ status: "not-found" });
       return;
     }
-    setState({ status: "confirm", cardId, card, manual });
+    setState({ status: "confirm", cardId, card, manual, count: 1 });
   }, []);
 
   const tick = useCallback(() => {
@@ -104,7 +106,7 @@ export default function StampScanner() {
   async function handleConfirm() {
     if (state.status !== "confirm") return;
     const previousRedemptions = state.card.redemptions;
-    const updated = await addStamp(state.cardId);
+    const updated = await addStamps(state.cardId, state.count);
     if (!updated) {
       // Most likely the staff session expired — send them back through the PIN gate.
       window.location.reload();
@@ -113,8 +115,17 @@ export default function StampScanner() {
     setState({
       status: "success",
       card: updated,
-      redeemed: updated.redemptions > previousRedemptions,
+      added: state.count,
+      rewards: updated.redemptions - previousRedemptions,
     });
+  }
+
+  function changeCount(delta: number) {
+    setState((current) =>
+      current.status === "confirm"
+        ? { ...current, count: Math.min(MAX_STAMPS_PER_PURCHASE, Math.max(1, current.count + delta)) }
+        : current,
+    );
   }
 
   async function handleManualSubmit(event: FormEvent) {
@@ -138,7 +149,7 @@ export default function StampScanner() {
       setState({ status: "not-found" });
       return;
     }
-    setState({ status: "confirm", cardId: card.id, card, manual: true });
+    setState({ status: "confirm", cardId: card.id, card, manual: true, count: 1 });
   }
 
   function scanNext() {
@@ -148,7 +159,7 @@ export default function StampScanner() {
 
   return (
     <div className="relative w-full max-w-sm overflow-hidden rounded-lg border border-hairline bg-canvas p-xl">
-      {state.status === "success" && state.redeemed && <Confetti />}
+      {state.status === "success" && state.rewards > 0 && <Confetti />}
 
       <p className="text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted">
         {t.staff.scanEyebrow}
@@ -235,7 +246,33 @@ export default function StampScanner() {
               📱 <bdi dir="ltr">{state.card.phoneHint}</bdi>
             </p>
           )}
-          <div className="mt-lg flex gap-sm">
+          <div className="mt-md flex items-center justify-between gap-sm rounded-md border border-hairline p-xs">
+            <span className="ps-xs text-body-sm text-muted">{t.staff.stampCount}</span>
+            <div className="flex items-center gap-xs">
+              <button
+                type="button"
+                onClick={() => changeCount(-1)}
+                disabled={state.count <= 1}
+                aria-label={t.staff.fewerStamps}
+                className="h-11 w-11 rounded-md border border-hairline text-title-md font-semibold text-ink disabled:opacity-40"
+              >
+                −
+              </button>
+              <span className="w-8 text-center font-mono text-title-lg font-semibold tabular-nums text-ink" aria-live="polite">
+                {state.count}
+              </span>
+              <button
+                type="button"
+                onClick={() => changeCount(1)}
+                disabled={state.count >= MAX_STAMPS_PER_PURCHASE}
+                aria-label={t.staff.moreStamps}
+                className="h-11 w-11 rounded-md border border-hairline text-title-md font-semibold text-ink disabled:opacity-40"
+              >
+                +
+              </button>
+            </div>
+          </div>
+          <div className="mt-md flex gap-sm">
             <button
               onClick={scanNext}
               className="h-11 flex-1 rounded-md border border-hairline text-button font-semibold text-ink"
@@ -246,7 +283,7 @@ export default function StampScanner() {
               onClick={handleConfirm}
               className="h-11 flex-1 rounded-md bg-primary text-button font-semibold text-on-primary"
             >
-              {t.staff.addStamp}
+              {t.staff.addStamps(state.count)}
             </button>
           </div>
           {state.manual && <MoveCard cardId={state.cardId} open={showMoveCard} onToggle={setShowMoveCard} />}
@@ -257,13 +294,13 @@ export default function StampScanner() {
         <>
           <div
             className={`animate-stamp-enter mt-xxs flex h-11 w-11 items-center justify-center rounded-full ${
-              state.redeemed ? "bg-brand-ochre" : "bg-primary"
+              state.rewards > 0 ? "bg-brand-ochre" : "bg-primary"
             }`}
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path
                 d="M4 10.5L8 14.5L16 5.5"
-                stroke={state.redeemed ? "#0a0a0a" : "#fffaf0"}
+                stroke={state.rewards > 0 ? "#0a0a0a" : "#fffaf0"}
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -271,11 +308,11 @@ export default function StampScanner() {
             </svg>
           </div>
           <h1 className="mt-sm text-display-sm font-medium tracking-display-sm text-ink">
-            {state.redeemed ? t.staff.rewardRedeemed : t.staff.stampAdded}
+            {state.rewards > 0 ? t.staff.rewardRedeemed : t.staff.stampsAdded(state.added)}
           </h1>
-          {state.redeemed && (
+          {state.rewards > 0 && (
             <p className="mt-xxs text-title-sm font-semibold text-ink">
-              {t.staff.giveReward}
+              {t.staff.giveRewards(state.rewards)}
             </p>
           )}
           <p className="mt-xs font-mono text-title-lg font-semibold tabular-nums text-ink">

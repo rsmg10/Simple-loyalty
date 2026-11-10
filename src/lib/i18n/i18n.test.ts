@@ -57,6 +57,13 @@ describe("messages", () => {
     }
   });
 
+  it("uses the accusative dual after a verb on the staff screen", () => {
+    expect(messages.ar.staff.addStamps(1)).toBe("أضِف ختمًا");
+    expect(messages.ar.staff.addStamps(2)).toBe("أضِف ختمين");
+    expect(messages.ar.staff.addStamps(3)).toBe("أضِف 3 أختام");
+    expect(messages.en.staff.addStamps(3)).toBe("Add 3 stamps");
+  });
+
   it("renders Arabic signage copy with the correct plural", () => {
     expect(messages.ar.signage.reward(9)).toBe("قهوة مجانية بعد 9 أختام");
     expect(messages.ar.signage.reward(12)).toBe("قهوة مجانية بعد 12 ختمًا");
