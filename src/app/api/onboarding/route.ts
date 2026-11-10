@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   }
 
   // One shop per owner account for now — see shops_owner_user_id_idx in
-  // supabase/schema.sql for the DB-level backstop against a double-submit
+  // supabase/migrations/0001_initial.sql for the DB-level backstop against a double-submit
   // race slipping past this check.
   const existingShop = await getShopByOwnerUserId(ownerUserId);
   if (existingShop) {

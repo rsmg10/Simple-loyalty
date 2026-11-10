@@ -1,4 +1,6 @@
--- Run this once in the Supabase SQL editor for your project.
+-- Everything up to Arabic + phone lookup, from when this was a single
+-- hand-run schema.sql. Every statement is idempotent, so a database that
+-- already ran that file can safely take this as its first tracked migration.
 
 create extension if not exists pgcrypto;
 

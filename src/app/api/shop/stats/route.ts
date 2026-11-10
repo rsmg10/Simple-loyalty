@@ -1,9 +1,10 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { isAuthorizedForShopSettings } from "@/lib/shop-auth";
+import { selectAllShopCards } from "@/lib/shop-cards";
 import { getShop } from "@/lib/shop-repo";
+import { computeShopStats, type StatsRow } from "@/lib/shop-stats";
 import { STAFF_SESSION_COOKIE } from "@/lib/staff-session";
-import { getSupabaseAdmin } from "@/lib/supabase";
 
 // Stats are read from the database on every request — never prerender or
 // cache this route (see src/lib/supabase.ts's getSupabaseAdmin for the
@@ -17,22 +18,12 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = getSupabaseAdmin();
-  // This is a single small café — fetching every card's two int columns and
-  // summing them here is simpler and plenty fast, no need for a DB view or
-  // RPC to get server-side SUM().
-  const { data, error } = await supabase
-    .from("cards")
-    .select("lifetime_stamps, redemptions")
-    .eq("shop_id", shop.id);
-
-  if (error || !data) {
+  // A café's cards are a few int columns each — summing them here is
+  // simpler than a DB view or RPC, and plenty fast at café scale.
+  const rows = await selectAllShopCards<StatsRow>(shop.id, "lifetime_stamps, redemptions, last_stamped_at");
+  if (!rows) {
     return NextResponse.json({ error: "Failed to load shop stats" }, { status: 500 });
   }
 
-  const totalCards = data.length;
-  const totalStampsGiven = data.reduce((sum, row) => sum + row.lifetime_stamps, 0);
-  const totalRedemptions = data.reduce((sum, row) => sum + row.redemptions, 0);
-
-  return NextResponse.json({ totalCards, totalStampsGiven, totalRedemptions });
+  return NextResponse.json(computeShopStats(rows));
 }

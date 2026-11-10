@@ -39,7 +39,11 @@ configuration, plus two items still open.
 ## Phase 2 — Supabase
 
 - [ ] Create a project at supabase.com (pick the region closest to the café).
-- [ ] SQL editor: paste and run `supabase/schema.sql`. Safe to re-run.
+- [ ] Project Settings → Database: copy the **connection string** into
+      `DATABASE_URL` (Vercel: Production environment only). Every production
+      deploy then applies new migrations automatically before going live.
+      No `DATABASE_URL`? Run the files in `supabase/migrations/` in order in
+      the SQL editor instead.
 - [ ] Project Settings → API: copy the **Project URL**, the **service_role**
       key (server only, never exposed to the browser) and the **anon** key.
 - [ ] **Immediately change the seeded staff PIN** (`1234`) via `/setup`, or

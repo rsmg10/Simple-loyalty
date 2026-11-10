@@ -121,11 +121,12 @@ If no reply after about 5 days, one short nudge, then let it go.
 - Cards issued per week.
 - Stamps given per week.
 - Free rewards redeemed.
+- Return rate and active customers (30 days).
 - Staff friction: does stamping slow the line? Any customers confused?
 - The café's own words for what's good and bad. Write them down verbatim.
 
-You can read the first three from each café's `/setup` page. There is no
-repeat-visit metric yet.
+You can read the first four from each café's `/setup` page (week-by-week
+numbers mean noting them down each week; there's no history view).
 
 ## Decide in advance when to stop
 
@@ -144,7 +145,7 @@ Before using any line above, check it against what's live:
   the count); Google passes update live.
 - **Email reminders:** only promise them once `EMAIL_FROM_ADDRESS` is set on a
   Resend-verified domain. Until then they won't reach customers.
-- **Dashboard:** it shows totals (cards, stamps, redemptions), not repeat visits
-  or revenue. Don't imply more.
+- **Dashboard:** it shows totals, returning customers (2+ stamps) and active
+  customers (last 30 days), not revenue or per-visit history. Don't imply more.
 - **Reliability:** this is one person's new software. Promise fast fixes, not
   uptime guarantees.

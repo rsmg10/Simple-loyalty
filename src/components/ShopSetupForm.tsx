@@ -2,7 +2,9 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useI18n } from "./I18nProvider";
+import CustomerList from "./CustomerList";
 import { saveShopConfig, useShopConfig, useShopStats } from "@/lib/shop-config";
+import { returnRatePercent } from "@/lib/shop-stats";
 
 const MIN_STAMPS_REQUIRED = 3;
 const MAX_STAMPS_REQUIRED = 20;
@@ -10,7 +12,10 @@ const MAX_STAMPS_REQUIRED = 20;
 export default function ShopSetupForm() {
   const { locale, t } = useI18n();
   const { shopName: currentName, stampsRequired: currentStamps, loading } = useShopConfig();
-  const { totalCards, totalStampsGiven, totalRedemptions, loading: statsLoading } = useShopStats();
+  const stats = useShopStats();
+  const { totalCards, totalStampsGiven, totalRedemptions, returningCustomers, activeCustomers } = stats;
+  const statsLoading = stats.loading;
+  const returnRate = returnRatePercent(stats);
   const [shopName, setShopName] = useState("");
   const [stampsRequired, setStampsRequired] = useState("");
   const [staffPin, setStaffPin] = useState("");
@@ -102,8 +107,35 @@ export default function ShopSetupForm() {
               {t.setup.redemptions}
             </p>
           </div>
+          <div>
+            <p className="text-title-lg font-semibold tabular-nums text-ink">
+              {statsLoading ? "–" : returningCustomers}
+            </p>
+            <p className="mt-xxs text-caption-uppercase uppercase tracking-caption-uppercase text-muted">
+              {t.setup.returningCustomers}
+            </p>
+          </div>
+          <div>
+            <p className="text-title-lg font-semibold tabular-nums text-ink">
+              {statsLoading || returnRate === null ? "–" : `${returnRate}%`}
+            </p>
+            <p className="mt-xxs text-caption-uppercase uppercase tracking-caption-uppercase text-muted">
+              {t.setup.returnRate}
+            </p>
+          </div>
+          <div>
+            <p className="text-title-lg font-semibold tabular-nums text-ink">
+              {statsLoading ? "–" : activeCustomers}
+            </p>
+            <p className="mt-xxs text-caption-uppercase uppercase tracking-caption-uppercase text-muted">
+              {t.setup.activeCustomers}
+            </p>
+          </div>
         </div>
+        <p className="mt-md text-caption text-muted">{t.setup.statsNote}</p>
       </div>
+
+      <CustomerList />
 
       <div className="rounded-lg border border-hairline bg-canvas p-xl">
         <p className="text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted">

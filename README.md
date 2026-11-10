@@ -20,14 +20,18 @@ second copy with its own Supabase project.
    From Project Settings → API, grab the **Project URL** and the
    **`service_role`** key (not the `anon` key — the app only ever talks to
    Supabase from the server).
-2. **Run the schema.** Paste [`supabase/schema.sql`](supabase/schema.sql)
-   into the Supabase SQL editor and run it. This creates the `shops` and
-   `cards` tables and seeds one shop row (name "Cafe Meridian", 9 stamps,
-   PIN `1234`). The script is safe to re-run.
+2. **Database migrations** run automatically: set `DATABASE_URL` (step 3)
+   and every build applies any new files in
+   [`supabase/migrations`](supabase/migrations) before Next.js builds — see
+   [Migrations](#migrations). The first one creates the `shops` and `cards`
+   tables and seeds one shop row (name "Cafe Meridian", 9 stamps, PIN
+   `1234`).
 3. **Set environment variables** (see [`.env.local.example`](.env.local.example)
    for the full list and descriptions) — locally in `.env.local`, and in
    your hosting provider's project settings for production:
    - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — from step 1.
+   - `DATABASE_URL` — Project Settings → Database → connection string. On
+     Vercel, add it to the **Production** environment only.
    - `STAFF_SESSION_SECRET` — any random string (`openssl rand -hex 32`).
      Signs the staff login cookie; changing it logs out all staff sessions.
    - `NEXT_PUBLIC_APP_URL` — the deployment's own URL, no trailing slash
@@ -44,6 +48,29 @@ second copy with its own Supabase project.
 4. **Deploy** (`vercel deploy` or connect the repo in the Vercel dashboard).
 5. Go through the [pre-launch checklist](#pre-launch-checklist) below before
    handing it to the café.
+
+### Migrations
+
+Schema changes live in numbered files in
+[`supabase/migrations`](supabase/migrations) (`0004_add_something.sql`,
+…). [`scripts/migrate.mjs`](scripts/migrate.mjs) applies the ones a
+database hasn't had yet, records them in a `schema_migrations` table, and
+tells Supabase's REST layer to reload its schema:
+
+- **Automatically** before every `npm run build` when `DATABASE_URL` is set.
+  A failing migration rolls back entirely and fails the deploy, so the old
+  version keeps serving. Skipped on Vercel preview builds and when
+  `DATABASE_URL` is unset (CI, local builds).
+- **On demand** with `npm run migrate`.
+- **By hand**, without `DATABASE_URL`: run the files in order in the
+  Supabase SQL editor.
+
+Rules: never edit a migration once it's been applied anywhere (the runner
+refuses — add a new one instead), and keep them additive (new columns or
+tables), because the previous deployment serves traffic while the new one
+builds. A database set up from the old hand-run `schema.sql` upgrades
+cleanly: `0001_initial.sql` is that file, and every statement in it is
+idempotent.
 
 ### Local development
 
@@ -75,6 +102,26 @@ Arabic (right-to-left) and English. `DEFAULT_LOCALE` picks the language a
 first-time visitor sees; a toggle at the bottom of each page switches it,
 and the choice is remembered on that device (a `locale` cookie). Owner
 sign-up/login/onboarding pages and reminder emails are English-only for now.
+
+## Dashboard and customer list
+
+`/setup` shows, besides the totals:
+
+- **Returning customers** — cards with 2 or more stamps — and the **return
+  rate**: returning ÷ customers with at least one stamp. There's no
+  per-visit log, so two stamps on a first visit count as returning too.
+- **Active (30 days)** — cards stamped in the last 30 days. Only stamps
+  given after migration `0003` count, so this starts low on an existing
+  database.
+- **Message customers** — every customer who added a phone number, most
+  recent visit first, each with a WhatsApp button (`wa.me` link, optionally
+  pre-filled with a message typed once at the top) and a "copy all numbers"
+  button for building a WhatsApp broadcast list. Customers are told when
+  they add their number that the café may message them.
+
+Without a linked owner account, `/setup` — including this list of full
+phone numbers — is unlocked by the staff PIN, so anyone with the PIN can
+see it. Link an owner account to keep it to the owner.
 
 ## Customer phone numbers
 

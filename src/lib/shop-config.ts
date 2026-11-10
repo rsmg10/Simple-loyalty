@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { CustomerJson } from "./customer-list";
+import type { ShopStatsJson } from "./shop-stats";
 
 export type ShopConfig = {
   shopName: string;
@@ -55,17 +57,19 @@ export function useShopConfig(): ShopConfig {
   return { shopName, stampsRequired, appleWalletEnabled, googleWalletEnabled, emailRemindersEnabled, loading };
 }
 
-export type ShopStats = {
-  totalCards: number;
-  totalStampsGiven: number;
-  totalRedemptions: number;
-  loading: boolean;
+export type ShopStats = ShopStatsJson & { loading: boolean };
+
+const EMPTY_STATS: ShopStatsJson = {
+  totalCards: 0,
+  totalStampsGiven: 0,
+  totalRedemptions: 0,
+  stampedCustomers: 0,
+  returningCustomers: 0,
+  activeCustomers: 0,
 };
 
 export function useShopStats(): ShopStats {
-  const [totalCards, setTotalCards] = useState(0);
-  const [totalStampsGiven, setTotalStampsGiven] = useState(0);
-  const [totalRedemptions, setTotalRedemptions] = useState(0);
+  const [stats, setStats] = useState<ShopStatsJson>(EMPTY_STATS);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -73,11 +77,8 @@ export function useShopStats(): ShopStats {
 
     fetch("/api/shop/stats")
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
-      .then((data: { totalCards: number; totalStampsGiven: number; totalRedemptions: number }) => {
-        if (cancelled) return;
-        setTotalCards(data.totalCards);
-        setTotalStampsGiven(data.totalStampsGiven);
-        setTotalRedemptions(data.totalRedemptions);
+      .then((data: ShopStatsJson) => {
+        if (!cancelled) setStats(data);
       })
       .catch((error) => {
         console.error("Failed to load shop stats", error);
@@ -91,7 +92,36 @@ export function useShopStats(): ShopStats {
     };
   }, []);
 
-  return { totalCards, totalStampsGiven, totalRedemptions, loading };
+  return { ...stats, loading };
+}
+
+export function useShopCustomers(): { customers: CustomerJson[]; loading: boolean; error: boolean } {
+  const [customers, setCustomers] = useState<CustomerJson[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/shop/customers")
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((data: { customers: CustomerJson[] }) => {
+        if (!cancelled) setCustomers(data.customers);
+      })
+      .catch((err) => {
+        console.error("Failed to load customers", err);
+        if (!cancelled) setError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { customers, loading, error };
 }
 
 export async function saveShopConfig(config: {
