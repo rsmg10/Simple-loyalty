@@ -33,11 +33,14 @@ second copy with its own Supabase project.
    - `NEXT_PUBLIC_APP_URL` — the deployment's own URL, no trailing slash
      (e.g. `https://your-cafe.vercel.app`). Used to build the unsubscribe
      link in reminder emails.
-   - `RESEND_API_KEY` — optional. Without it, the app still works; it just
-     skips sending the "1 stamp away" reminder email (logs a warning
-     instead of failing). Also set `EMAIL_FROM_ADDRESS` (and, for US
+   - `RESEND_API_KEY` — optional. Without it, the app still works; the
+     card simply doesn't offer the "1 stamp away" reminder email. Also set `EMAIL_FROM_ADDRESS` (and, for US
      recipients, `EMAIL_MAILING_ADDRESS`) before launch — see the
      [pre-launch checklist](#pre-launch-checklist).
+   - `DEFAULT_LOCALE` — optional, `ar` or `en` (default `en`). See
+     [Language](#language).
+   - `PHONE_COUNTRY_CODE` — optional, defaults to `218` (Libya). See
+     [Customer phone numbers](#customer-phone-numbers).
 4. **Deploy** (`vercel deploy` or connect the repo in the Vercel dashboard).
 5. Go through the [pre-launch checklist](#pre-launch-checklist) below before
    handing it to the café.
@@ -64,6 +67,33 @@ the default `*.vercel.app` URL:
    domain (e.g. `https://loyalty.mycafe.com`) and redeploy — it's used to
    build absolute links such as the unsubscribe link in reminder emails and
    the QR code on the `/signage` page.
+
+## Language
+
+The customer card, counter sign, staff screen and `/setup` are available in
+Arabic (right-to-left) and English. `DEFAULT_LOCALE` picks the language a
+first-time visitor sees; a toggle at the bottom of each page switches it,
+and the choice is remembered on that device (a `locale` cookie). Owner
+sign-up/login/onboarding pages and reminder emails are English-only for now.
+
+## Customer phone numbers
+
+Customers can add their mobile number to their card (optional). Staff can
+then type the number at `/staff` instead of scanning — useful when the
+customer's phone is flat or offline — and it's how a card survives a new
+phone:
+
+1. The customer tells staff their number; staff look it up.
+2. Staff tap **Move card to customer's phone** and the customer scans the QR
+   code with their new phone's camera. The card (and its stamps) now opens
+   on that phone.
+
+Numbers are stored in international format (`+218912345678`), so
+`091 234 5678`, `+218 91-234-5678` and Arabic-keyboard digits all match.
+A number can belong to one card per shop; if a customer enters a number
+that's already on another card, they're asked to have staff move it rather
+than taking it over themselves. Lookup by number requires a staff session,
+and the card page only ever shows the last three digits.
 
 ## Wallet passes (optional)
 
@@ -199,9 +229,12 @@ customers outside your test users.
   unauthenticated, same trust model as the QR code itself). Low risk for a
   single small shop; would need attention before this became a public
   multi-tenant product.
-- **Card identity is device-local.** A customer's card is remembered via
-  their browser's storage, not an account. Clearing browser data or
-  switching devices starts a new card.
+- **Card identity is device-local unless the customer adds a phone
+  number.** A card is remembered via the browser's storage, not an account.
+  Clearing browser data or switching devices starts a new card — recoverable
+  through staff only if the customer added their number (see
+  [Customer phone numbers](#customer-phone-numbers)). Numbers aren't
+  verified by SMS.
 - **Apple Wallet passes don't auto-update.** Google Wallet passes update
   live (Google hosts the pass state, so the app pushes the new stamp count
   after every stamp), but Apple Wallet passes are generated once at download

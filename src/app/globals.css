@@ -6,6 +6,12 @@ body {
   background-color: #fffaf0;
 }
 
+/* Arabic letters join to their neighbours — any letter-spacing (the
+   tracking-* utilities) pulls them apart, so Arabic text drops it. */
+:lang(ar) {
+  letter-spacing: normal !important;
+}
+
 @keyframes stamp-enter {
   from {
     transform: scale(0.55);

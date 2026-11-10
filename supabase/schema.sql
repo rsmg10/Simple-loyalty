@@ -52,6 +52,13 @@ alter table shops add column if not exists owner_user_id uuid;
 -- as the slug index: never applies to a shop without an owner.
 create unique index if not exists shops_owner_user_id_idx on shops(owner_user_id) where owner_user_id is not null;
 
+-- Optional customer phone number (E.164, see src/lib/phone.ts) — lets staff
+-- find a card by number at the counter and move it to a customer's new
+-- phone. Unique per shop, so a lookup by number always finds one card; the
+-- same number can still hold a card at each of several shops.
+alter table cards add column if not exists phone text;
+create unique index if not exists cards_shop_phone_idx on cards(shop_id, phone) where phone is not null;
+
 -- Seed the single shop this MVP operates. Change the PIN before going live.
 -- crypt(..., gen_salt('bf')) produces a standard bcrypt hash ($2a$/$2b$
 -- prefixed) via pgcrypto. pgcrypto's bcrypt implementation is wire-compatible

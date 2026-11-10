@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useI18n } from "./I18nProvider";
 import { setCardEmail } from "@/lib/card-store";
 
 type EmailReminderOptInProps = {
@@ -9,6 +10,7 @@ type EmailReminderOptInProps = {
 };
 
 export default function EmailReminderOptIn({ cardId, email }: EmailReminderOptInProps) {
+  const { t } = useI18n();
   const [value, setValue] = useState(email ?? "");
   const [saved, setSaved] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -31,8 +33,11 @@ export default function EmailReminderOptIn({ cardId, email }: EmailReminderOptIn
   if (confirmedEmail && !editing) {
     return (
       <p className="text-body-sm text-muted">
-        📧 We&apos;ll email <span className="text-ink">{confirmedEmail}</span> when you&apos;re 1
-        stamp away.{" "}
+        {t.email.savedPrefix}{" "}
+        <bdi dir="ltr" className="text-ink">
+          {confirmedEmail}
+        </bdi>{" "}
+        {t.email.savedSuffix}{" "}
         <button
           type="button"
           onClick={() => {
@@ -41,7 +46,7 @@ export default function EmailReminderOptIn({ cardId, email }: EmailReminderOptIn
           }}
           className="font-semibold text-ink underline underline-offset-2"
         >
-          Change
+          {t.email.change}
         </button>
       </p>
     );
@@ -51,18 +56,20 @@ export default function EmailReminderOptIn({ cardId, email }: EmailReminderOptIn
     <form onSubmit={handleSubmit} className="flex gap-xs">
       <input
         type="email"
+        dir={value ? "ltr" : undefined}
         value={value}
         autoFocus={editing}
         onChange={(event) => setValue(event.target.value)}
-        placeholder="Email for a nudge (optional)"
-        className="h-11 flex-1 rounded-md border border-hairline bg-canvas px-md text-body-md text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink focus:ring-offset-2 focus:ring-offset-canvas"
+        placeholder={t.email.placeholder}
+        aria-label={t.email.placeholder}
+        className="h-11 min-w-0 flex-1 rounded-md border border-hairline bg-canvas px-md text-body-md text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink focus:ring-offset-2 focus:ring-offset-canvas"
       />
       <button
         type="submit"
         disabled={submitting}
         className="h-11 rounded-md border border-hairline px-md text-button font-semibold text-ink disabled:opacity-60"
       >
-        Save
+        {t.email.save}
       </button>
     </form>
   );

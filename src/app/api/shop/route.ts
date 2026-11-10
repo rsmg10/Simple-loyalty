@@ -23,6 +23,8 @@ export async function GET() {
     stampsRequired: shop.stampsRequired,
     appleWalletEnabled: isAppleWalletConfigured(),
     googleWalletEnabled: isGoogleWalletConfigured(),
+    // Without Resend the reminder is never sent, so don't ask for an email.
+    emailRemindersEnabled: Boolean(process.env.RESEND_API_KEY),
   });
 }
 

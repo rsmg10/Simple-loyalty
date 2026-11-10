@@ -17,4 +17,10 @@ describe("getEncouragementCopy", () => {
   it("shows plain progress copy below 50% and above 0", () => {
     expect(getEncouragementCopy(2, 9)).toBe("7 more stamps until your next coffee is free.");
   });
+
+  it("renders the same states in Arabic with correct plurals", () => {
+    expect(getEncouragementCopy(8, 9, "ar")).toBe("اقتربت! ختم واحد فقط وتكون قهوتك القادمة مجانية.");
+    expect(getEncouragementCopy(7, 9, "ar")).toBe("وصلت إلى المنتصف! تبقّى ختمان على قهوتك المجانية القادمة.");
+    expect(getEncouragementCopy(0, 9, "ar")).toBe("تبقّى 9 أختام على قهوتك المجانية القادمة.");
+  });
 });

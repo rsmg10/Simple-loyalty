@@ -7,6 +7,7 @@ export type ShopConfig = {
   stampsRequired: number;
   appleWalletEnabled: boolean;
   googleWalletEnabled: boolean;
+  emailRemindersEnabled: boolean;
   loading: boolean;
 };
 
@@ -15,6 +16,7 @@ export function useShopConfig(): ShopConfig {
   const [stampsRequired, setStampsRequired] = useState(9);
   const [appleWalletEnabled, setAppleWalletEnabled] = useState(false);
   const [googleWalletEnabled, setGoogleWalletEnabled] = useState(false);
+  const [emailRemindersEnabled, setEmailRemindersEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,12 +30,14 @@ export function useShopConfig(): ShopConfig {
           stampsRequired: number;
           appleWalletEnabled: boolean;
           googleWalletEnabled: boolean;
+          emailRemindersEnabled: boolean;
         }) => {
           if (cancelled) return;
           setShopName(data.name);
           setStampsRequired(data.stampsRequired);
           setAppleWalletEnabled(data.appleWalletEnabled);
           setGoogleWalletEnabled(data.googleWalletEnabled);
+          setEmailRemindersEnabled(data.emailRemindersEnabled);
         },
       )
       .catch((error) => {
@@ -48,7 +52,7 @@ export function useShopConfig(): ShopConfig {
     };
   }, []);
 
-  return { shopName, stampsRequired, appleWalletEnabled, googleWalletEnabled, loading };
+  return { shopName, stampsRequired, appleWalletEnabled, googleWalletEnabled, emailRemindersEnabled, loading };
 }
 
 export type ShopStats = {

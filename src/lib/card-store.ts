@@ -4,6 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const CARD_ID_KEY = "loyalty_card_id";
 const POLL_INTERVAL_MS = 5000;
+// Query parameter on the "move card to this phone" link the staff screen
+// shows as a QR code.
+export const SHARED_CARD_PARAM = "card";
+
+const CARD_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isCardId(value: string): boolean {
+  return CARD_ID_PATTERN.test(value);
+}
 
 export type CardRecord = {
   id: string;
@@ -12,6 +21,7 @@ export type CardRecord = {
   redemptions: number;
   lastSeenRedemptions: number;
   email?: string;
+  phoneHint?: string;
 };
 
 async function fetchCard(cardId: string): Promise<CardRecord | null> {
@@ -40,6 +50,56 @@ export async function setCardEmail(cardId: string, email: string): Promise<CardR
   return res.json();
 }
 
+export type SetPhoneResult =
+  | { ok: true; card: CardRecord }
+  | { ok: false; reason: "invalid" | "taken" | "failed" };
+
+export async function setCardPhone(cardId: string, phone: string): Promise<SetPhoneResult> {
+  try {
+    const res = await fetch(`/api/cards/${cardId}/phone`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone }),
+    });
+    if (res.ok) return { ok: true, card: await res.json() };
+    if (res.status === 400) return { ok: false, reason: "invalid" };
+    if (res.status === 409) return { ok: false, reason: "taken" };
+    return { ok: false, reason: "failed" };
+  } catch {
+    return { ok: false, reason: "failed" };
+  }
+}
+
+// Staff-only (needs the staff session cookie). `status` lets the caller
+// tell an expired session (401) apart from "no such card".
+export async function lookupCardByPhone(phone: string): Promise<{ card: CardRecord | null; status: number }> {
+  try {
+    const res = await fetch("/api/staff/card-lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone }),
+    });
+    return { card: res.ok ? await res.json() : null, status: res.status };
+  } catch {
+    return { card: null, status: 0 };
+  }
+}
+
+// Reads (and strips from the address bar) a card id handed over by staff
+// via the "move card to this phone" QR code.
+function takeSharedCardId(): string | null {
+  const url = new URL(window.location.href);
+  const shared = url.searchParams.get(SHARED_CARD_PARAM);
+  if (shared === null) return null;
+  url.searchParams.delete(SHARED_CARD_PARAM);
+  window.history.replaceState(null, "", url.toString());
+  return isCardId(shared) ? shared : null;
+}
+
+function hasProgress(card: CardRecord | null): boolean {
+  return Boolean(card && (card.stampsEarned > 0 || card.redemptions > 0));
+}
+
 export async function markRedemptionsSeen(cardId: string): Promise<CardRecord | null> {
   const res = await fetch(`/api/cards/${cardId}/seen`, { method: "POST" });
   if (!res.ok) return null;
@@ -49,7 +109,11 @@ export async function markRedemptionsSeen(cardId: string): Promise<CardRecord | 
 // Owns "my card" on the customer's own device: creates one on first visit,
 // remembers its id locally, and polls the server so a stamp added by staff
 // on a *different* device shows up here without a manual reload.
-export function useOwnCard(): {
+//
+// If the page was opened from a staff-shared link, that card replaces the
+// one stored on this device — asking first (`confirmReplace`) only when the
+// current card already has stamps, since the swap would hide it from here.
+export function useOwnCard(options?: { confirmReplace?: () => boolean }): {
   cardId: string | null;
   card: CardRecord | null;
   loadError: boolean;
@@ -60,6 +124,11 @@ export function useOwnCard(): {
   const [loadError, setLoadError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const cardIdRef = useRef<string | null>(null);
+  const confirmReplaceRef = useRef(options?.confirmReplace);
+  confirmReplaceRef.current = options?.confirmReplace;
+  // Read once per mount: the param is stripped from the URL on first read,
+  // and a re-run effect (React strict mode, retry) must still see it.
+  const sharedIdRef = useRef<string | null | undefined>(undefined);
 
   const refresh = useCallback(async () => {
     const id = cardIdRef.current;
@@ -76,6 +145,20 @@ export function useOwnCard(): {
       try {
         let id = window.localStorage.getItem(CARD_ID_KEY);
         let initialCard: CardRecord | null = null;
+
+        if (sharedIdRef.current === undefined) sharedIdRef.current = takeSharedCardId();
+        const sharedId = sharedIdRef.current;
+        if (sharedId && sharedId !== id) {
+          const shared = await fetchCard(sharedId);
+          const current = shared && id ? await fetchCard(id) : null;
+          if (cancelled) return;
+          const confirmReplace = confirmReplaceRef.current ?? (() => true);
+          if (shared && (!hasProgress(current) || confirmReplace())) {
+            id = sharedId;
+            initialCard = shared;
+            window.localStorage.setItem(CARD_ID_KEY, id);
+          }
+        }
 
         if (!id) {
           const res = await fetch("/api/cards", { method: "POST" });

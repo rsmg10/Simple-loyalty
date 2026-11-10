@@ -1,3 +1,4 @@
+import LanguageToggle from "@/components/LanguageToggle";
 import OwnerSignInPrompt from "@/components/OwnerSignInPrompt";
 import OwnerSignOutButton from "@/components/OwnerSignOutButton";
 import SetupPinFlow from "@/components/SetupPinFlow";
@@ -13,7 +14,7 @@ export default async function SetupPage() {
     const isOwner = ownerUserId === shop.ownerUserId;
 
     return (
-      <main className="flex min-h-screen items-center justify-center bg-canvas p-lg py-xxl">
+      <main className="flex min-h-screen flex-col items-center justify-center gap-md bg-canvas p-lg py-xxl">
         {isOwner ? (
           <div className="w-full max-w-sm">
             <div className="mb-md flex justify-end">
@@ -24,13 +25,15 @@ export default async function SetupPage() {
         ) : (
           <OwnerSignInPrompt />
         )}
+        <LanguageToggle />
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-canvas p-lg py-xxl">
+    <main className="flex min-h-screen flex-col items-center justify-center gap-md bg-canvas p-lg py-xxl">
       <SetupPinFlow />
+      <LanguageToggle />
     </main>
   );
 }

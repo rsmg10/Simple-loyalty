@@ -1,3 +1,5 @@
+import { maskPhone } from "./phone";
+
 export type CardRow = {
   id: string;
   shop_id: string;
@@ -6,6 +8,7 @@ export type CardRow = {
   redemptions: number;
   last_seen_redemptions: number;
   email: string | null;
+  phone?: string | null;
 };
 
 export type CardJson = {
@@ -15,6 +18,9 @@ export type CardJson = {
   redemptions: number;
   lastSeenRedemptions: number;
   email?: string;
+  // Masked — the card id is the only credential a card has, so the full
+  // number never goes back out to whoever holds it.
+  phoneHint?: string;
 };
 
 export function toCardJson(row: CardRow): CardJson {
@@ -25,6 +31,7 @@ export function toCardJson(row: CardRow): CardJson {
     redemptions: row.redemptions,
     lastSeenRedemptions: row.last_seen_redemptions,
     email: row.email ?? undefined,
+    phoneHint: row.phone ? maskPhone(row.phone) : undefined,
   };
 }
 

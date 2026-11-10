@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useI18n } from "./I18nProvider";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export default function OwnerSignOutButton() {
+  const { t } = useI18n();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
 
@@ -21,7 +23,7 @@ export default function OwnerSignOutButton() {
       disabled={signingOut}
       className="text-body-sm text-muted underline underline-offset-2 disabled:opacity-60"
     >
-      Sign out
+      {t.owner.signOut}
     </button>
   );
 }

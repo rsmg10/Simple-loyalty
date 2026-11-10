@@ -1,6 +1,8 @@
 import CardQRCode from "./CardQRCode";
 import Confetti from "./Confetti";
 import EmailReminderOptIn from "./EmailReminderOptIn";
+import { useI18n } from "./I18nProvider";
+import PhoneOptIn from "./PhoneOptIn";
 import ProgressBar from "./ProgressBar";
 import StampGrid from "./StampGrid";
 import WalletButtons from "./WalletButtons";
@@ -14,6 +16,7 @@ type Card = {
   stampsEarned: number;
   stampsRequired: number;
   email?: string;
+  phoneHint?: string;
 };
 
 type LoyaltyCardProps = {
@@ -23,6 +26,7 @@ type LoyaltyCardProps = {
   justRedeemed?: boolean;
   appleWalletEnabled?: boolean;
   googleWalletEnabled?: boolean;
+  emailRemindersEnabled?: boolean;
 };
 
 export default function LoyaltyCard({
@@ -32,7 +36,9 @@ export default function LoyaltyCard({
   justRedeemed = false,
   appleWalletEnabled = false,
   googleWalletEnabled = false,
+  emailRemindersEnabled = false,
 }: LoyaltyCardProps) {
+  const { locale, t } = useI18n();
   const { stampsEarned, stampsRequired } = card;
 
   return (
@@ -41,24 +47,28 @@ export default function LoyaltyCard({
         <>
           <Confetti />
           <div className="animate-celebrate-in absolute inset-x-lg top-lg rounded-md bg-primary px-md py-xs text-center text-caption font-semibold text-on-primary">
-            🎉 Free coffee earned!
+            {t.card.rewardEarned}
           </div>
         </>
       )}
 
       <p className="text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted">
-        Digital Stamp Card
+        {t.card.eyebrow}
       </p>
       <h1 className="mt-xxs text-display-sm font-medium tracking-display-sm text-ink">
         {shop.name}
       </h1>
 
       <div className="mt-lg">
-        <StampGrid stampsEarned={stampsEarned} stampsRequired={stampsRequired} />
+        <StampGrid
+          stampsEarned={stampsEarned}
+          stampsRequired={stampsRequired}
+          label={t.card.progressLabel(stampsEarned, stampsRequired)}
+        />
       </div>
 
       <div className="mt-lg flex items-baseline justify-between">
-        <span className="font-mono text-title-lg font-semibold tabular-nums text-ink">
+        <span dir="ltr" className="font-mono text-title-lg font-semibold tabular-nums text-ink">
           {stampsEarned} / {stampsRequired}
         </span>
       </div>
@@ -68,12 +78,18 @@ export default function LoyaltyCard({
       </div>
 
       <p className="mt-sm text-body-sm text-muted">
-        {getEncouragementCopy(stampsEarned, stampsRequired)}
+        {getEncouragementCopy(stampsEarned, stampsRequired, locale)}
       </p>
 
       <div className="mt-md">
-        <EmailReminderOptIn cardId={cardId} email={card.email} />
+        <PhoneOptIn cardId={cardId} phoneHint={card.phoneHint} />
       </div>
+
+      {emailRemindersEnabled && (
+        <div className="mt-md">
+          <EmailReminderOptIn cardId={cardId} email={card.email} />
+        </div>
+      )}
 
       <div className="mt-md">
         <WalletButtons
@@ -85,15 +101,15 @@ export default function LoyaltyCard({
 
       <div className="mt-lg border-t border-hairline pt-lg">
         <p className="text-center text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted">
-          Show this to staff to add a stamp
+          {t.card.showToStaff}
         </p>
         <div className="mt-sm">
-          <CardQRCode value={cardId} />
+          <CardQRCode value={cardId} label={t.card.qrLabel} />
         </div>
         <p className="mt-sm text-center text-body-sm text-muted">
-          Camera not handy? Give staff this code:
+          {t.card.noCamera}
         </p>
-        <p className="mt-xxs select-all break-all text-center font-mono text-body-sm text-ink">
+        <p dir="ltr" className="mt-xxs select-all break-all text-center font-mono text-body-sm text-ink">
           {cardId}
         </p>
       </div>

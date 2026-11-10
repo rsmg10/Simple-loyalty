@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "./I18nProvider";
 
 type WalletButtonsProps = {
   cardId: string;
@@ -13,6 +14,7 @@ export default function WalletButtons({
   appleWalletEnabled,
   googleWalletEnabled,
 }: WalletButtonsProps) {
+  const { t } = useI18n();
   const [googleError, setGoogleError] = useState(false);
   const [addingToGoogle, setAddingToGoogle] = useState(false);
 
@@ -40,7 +42,7 @@ export default function WalletButtons({
           href={`/api/cards/${cardId}/apple-wallet`}
           className="flex h-11 items-center justify-center rounded-md border border-hairline text-button font-semibold text-ink"
         >
-          Add to Apple Wallet
+          {t.wallet.apple}
         </a>
       )}
       {googleWalletEnabled && (
@@ -51,11 +53,11 @@ export default function WalletButtons({
             disabled={addingToGoogle}
             className="flex h-11 items-center justify-center rounded-md border border-hairline text-button font-semibold text-ink disabled:opacity-60"
           >
-            Add to Google Wallet
+            {t.wallet.google}
           </button>
           {googleError && (
             <p className="text-center text-body-sm text-muted">
-              Couldn&apos;t add to Google Wallet. Try again.
+              {t.wallet.googleError}
             </p>
           )}
         </>

@@ -5,13 +5,13 @@ import { QRCodeSVG } from "qrcode.react";
 type CardQRCodeProps = {
   value: string;
   size?: number;
-  label?: string;
+  label: string;
 };
 
 export default function CardQRCode({
   value,
   size = 144,
-  label = "Your loyalty card QR code",
+  label,
 }: CardQRCodeProps) {
   return (
     <div

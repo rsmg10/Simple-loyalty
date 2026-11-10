@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useI18n } from "@/components/I18nProvider";
+import LanguageToggle from "@/components/LanguageToggle";
 import LoyaltyCard from "@/components/LoyaltyCard";
 import { markRedemptionsSeen, useOwnCard } from "@/lib/card-store";
 import { useShopConfig } from "@/lib/shop-config";
@@ -8,8 +10,11 @@ import { useShopConfig } from "@/lib/shop-config";
 const CELEBRATION_DURATION_MS = 2200;
 
 export default function Home() {
-  const { shopName, appleWalletEnabled, googleWalletEnabled } = useShopConfig();
-  const { cardId, card, loadError, retry } = useOwnCard();
+  const { t } = useI18n();
+  const { shopName, appleWalletEnabled, googleWalletEnabled, emailRemindersEnabled } = useShopConfig();
+  const { cardId, card, loadError, retry } = useOwnCard({
+    confirmReplace: () => window.confirm(t.card.replaceConfirm),
+  });
   const [justRedeemed, setJustRedeemed] = useState(false);
 
   useEffect(() => {
@@ -27,7 +32,7 @@ export default function Home() {
   }, [cardId, card]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-canvas p-lg py-xxl">
+    <main className="flex min-h-screen flex-col items-center justify-center gap-md bg-canvas p-lg py-xxl">
       {cardId && card ? (
         <LoyaltyCard
           shop={{ name: shopName }}
@@ -36,21 +41,23 @@ export default function Home() {
           justRedeemed={justRedeemed}
           appleWalletEnabled={appleWalletEnabled}
           googleWalletEnabled={googleWalletEnabled}
+          emailRemindersEnabled={emailRemindersEnabled}
         />
       ) : loadError ? (
         <div className="w-full max-w-sm rounded-lg border border-hairline bg-canvas p-xl text-center">
-          <p className="text-body-md text-ink">Couldn&apos;t load your card.</p>
-          <p className="mt-xs text-body-sm text-muted">Check your connection and try again.</p>
+          <p className="text-body-md text-ink">{t.card.loadError}</p>
+          <p className="mt-xs text-body-sm text-muted">{t.card.loadErrorHint}</p>
           <button
             onClick={retry}
             className="mt-lg h-11 w-full rounded-md bg-primary text-button font-semibold text-on-primary"
           >
-            Retry
+            {t.card.retry}
           </button>
         </div>
       ) : (
-        <p className="text-body-sm text-muted">Loading your card…</p>
+        <p className="text-body-sm text-muted">{t.card.loading}</p>
       )}
+      <LanguageToggle />
     </main>
   );
 }

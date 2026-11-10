@@ -3,11 +3,13 @@ import StampMark from "./StampMark";
 type StampGridProps = {
   stampsEarned: number;
   stampsRequired: number;
+  label: string;
 };
 
 export default function StampGrid({
   stampsEarned,
   stampsRequired,
+  label,
 }: StampGridProps) {
   const stamps = Array.from({ length: stampsRequired }, (_, i) => i < stampsEarned);
 
@@ -15,7 +17,7 @@ export default function StampGrid({
     <div
       className="grid grid-cols-3 gap-sm sm:gap-md"
       role="img"
-      aria-label={`${stampsEarned} of ${stampsRequired} stamps earned`}
+      aria-label={label}
     >
       {stamps.map((filled, i) => (
         <StampMark key={i} filled={filled} index={i} />

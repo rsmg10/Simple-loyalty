@@ -1,4 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import { I18nProvider } from "@/components/I18nProvider";
+import { dirFor } from "@/lib/i18n/locale";
+import { messages } from "@/lib/i18n/messages";
+import { getRequestLocale } from "@/lib/i18n/server";
 import { getShop } from "@/lib/shop-repo";
 import "./globals.css";
 
@@ -10,10 +14,11 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const shop = await getShop();
+  const { meta } = messages[getRequestLocale()];
 
   return {
-    title: `${shop.name} — Loyalty Card`,
-    description: "Your digital stamp card",
+    title: `${shop.name} — ${meta.titleSuffix}`,
+    description: meta.description,
     icons: {
       icon: "/icon.svg",
       apple: "/icon.svg",
@@ -35,10 +40,12 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const locale = getRequestLocale();
+
   return (
-    <html lang="en">
+    <html lang={locale} dir={dirFor(locale)}>
       <body className="bg-canvas font-sans text-body antialiased">
-        {children}
+        <I18nProvider initialLocale={locale}>{children}</I18nProvider>
       </body>
     </html>
   );

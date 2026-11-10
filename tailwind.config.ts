@@ -40,6 +40,9 @@ const config: Config = {
           "BlinkMacSystemFont",
           "Segoe UI",
           "Roboto",
+          // System Arabic faces — no web font download on slow connections.
+          "Noto Sans Arabic",
+          "Tahoma",
           "sans-serif",
         ],
         mono: [

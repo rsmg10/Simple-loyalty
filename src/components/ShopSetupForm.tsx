@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { useI18n } from "./I18nProvider";
 import { saveShopConfig, useShopConfig, useShopStats } from "@/lib/shop-config";
 
 const MIN_STAMPS_REQUIRED = 3;
 const MAX_STAMPS_REQUIRED = 20;
 
 export default function ShopSetupForm() {
+  const { locale, t } = useI18n();
   const { shopName: currentName, stampsRequired: currentStamps, loading } = useShopConfig();
   const { totalCards, totalStampsGiven, totalRedemptions, loading: statsLoading } = useShopStats();
   const [shopName, setShopName] = useState("");
@@ -35,7 +37,7 @@ export default function ShopSetupForm() {
     const trimmedPin = staffPin.trim();
 
     if (!trimmedName) {
-      setError("Shop name can't be empty.");
+      setError(t.setup.nameEmpty);
       return;
     }
     if (
@@ -43,11 +45,11 @@ export default function ShopSetupForm() {
       stampsNumber < MIN_STAMPS_REQUIRED ||
       stampsNumber > MAX_STAMPS_REQUIRED
     ) {
-      setError(`Stamps required must be a whole number between ${MIN_STAMPS_REQUIRED} and ${MAX_STAMPS_REQUIRED}.`);
+      setError(t.setup.stampsRange(MIN_STAMPS_REQUIRED, MAX_STAMPS_REQUIRED));
       return;
     }
     if (trimmedPin && trimmedPin.length < 4) {
-      setError("Staff PIN must be at least 4 characters.");
+      setError(t.setup.pinTooShort);
       return;
     }
 
@@ -61,7 +63,8 @@ export default function ShopSetupForm() {
     setSubmitting(false);
 
     if (!result.ok) {
-      setError(result.error);
+      // Server messages are English-only; Arabic gets the generic message.
+      setError(locale === "en" ? result.error : t.setup.saveFailed);
       return;
     }
     setStaffPin("");
@@ -72,7 +75,7 @@ export default function ShopSetupForm() {
     <div className="w-full max-w-sm space-y-lg">
       <div className="rounded-lg border border-hairline bg-canvas p-xl">
         <p className="text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted">
-          Shop Stats
+          {t.setup.statsEyebrow}
         </p>
         <div className="mt-md grid grid-cols-3 gap-md">
           <div>
@@ -80,7 +83,7 @@ export default function ShopSetupForm() {
               {statsLoading ? "–" : totalCards}
             </p>
             <p className="mt-xxs text-caption-uppercase uppercase tracking-caption-uppercase text-muted">
-              Cards issued
+              {t.setup.cardsIssued}
             </p>
           </div>
           <div>
@@ -88,7 +91,7 @@ export default function ShopSetupForm() {
               {statsLoading ? "–" : totalStampsGiven}
             </p>
             <p className="mt-xxs text-caption-uppercase uppercase tracking-caption-uppercase text-muted">
-              Stamps given
+              {t.setup.stampsGiven}
             </p>
           </div>
           <div>
@@ -96,7 +99,7 @@ export default function ShopSetupForm() {
               {statsLoading ? "–" : totalRedemptions}
             </p>
             <p className="mt-xxs text-caption-uppercase uppercase tracking-caption-uppercase text-muted">
-              Redemptions
+              {t.setup.redemptions}
             </p>
           </div>
         </div>
@@ -104,19 +107,18 @@ export default function ShopSetupForm() {
 
       <div className="rounded-lg border border-hairline bg-canvas p-xl">
         <p className="text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted">
-          Shop Setup
+          {t.setup.eyebrow}
         </p>
         <h1 className="mt-xxs text-display-sm font-medium tracking-display-sm text-ink">
-          Configure your shop
+          {t.setup.title}
         </h1>
         <p className="mt-xs text-body-sm text-muted">
-          Changes apply immediately to the customer card. New customer cards use the stamps
-          count below — cards already in progress keep their original count.
+          {t.setup.description}
         </p>
 
         <form onSubmit={handleSubmit} className="mt-lg space-y-md">
           <label className="block">
-            <span className="text-title-sm font-semibold text-ink">Shop name</span>
+            <span className="text-title-sm font-semibold text-ink">{t.setup.shopName}</span>
             <input
               value={shopName}
               onChange={(event) => setShopName(event.target.value)}
@@ -125,7 +127,7 @@ export default function ShopSetupForm() {
           </label>
 
           <label className="block">
-            <span className="text-title-sm font-semibold text-ink">Stamps required</span>
+            <span className="text-title-sm font-semibold text-ink">{t.setup.stampsRequired}</span>
             <input
               type="number"
               inputMode="numeric"
@@ -138,12 +140,12 @@ export default function ShopSetupForm() {
           </label>
 
           <label className="block">
-            <span className="text-title-sm font-semibold text-ink">New staff PIN</span>
+            <span className="text-title-sm font-semibold text-ink">{t.setup.newPin}</span>
             <input
               value={staffPin}
               onChange={(event) => setStaffPin(event.target.value)}
               inputMode="numeric"
-              placeholder="Leave blank to keep the current PIN"
+              placeholder={t.setup.newPinPlaceholder}
               className="mt-xxs h-11 w-full rounded-md border border-hairline bg-canvas px-md text-body-md text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink focus:ring-offset-2 focus:ring-offset-canvas"
             />
           </label>
@@ -155,7 +157,7 @@ export default function ShopSetupForm() {
           )}
           {saved && !error && (
             <p className="text-body-sm text-muted" role="status">
-              Saved.
+              {t.setup.saved}
             </p>
           )}
 
@@ -164,7 +166,7 @@ export default function ShopSetupForm() {
             disabled={submitting}
             className="h-11 w-full rounded-md bg-primary text-button font-semibold text-on-primary disabled:opacity-60"
           >
-            Save
+            {t.setup.save}
           </button>
         </form>
       </div>
