@@ -1,6 +1,6 @@
 import { createHmac } from "crypto";
 import { beforeAll, describe, expect, it } from "vitest";
-import { createStaffSessionCookie, verifyStaffSessionCookie } from "./staff-session";
+import { createStaffSessionCookie, readStaffSession, verifyStaffSessionCookie } from "./staff-session";
 
 beforeAll(() => {
   process.env.STAFF_SESSION_SECRET = "test-secret-not-for-real-use";
@@ -21,6 +21,18 @@ describe("staff session cookie", () => {
     const { value } = createStaffSessionCookie("shop-123");
     const tampered = value.slice(0, -1) + (value.endsWith("a") ? "b" : "a");
     expect(verifyStaffSessionCookie(tampered, "shop-123")).toBe(false);
+  });
+
+  it("tells a manager session from a staff member's", () => {
+    expect(readStaffSession(createStaffSessionCookie("shop-123").value, "shop-123")).toEqual({ staffMemberId: null });
+    expect(readStaffSession(createStaffSessionCookie("shop-123", "staff-9").value, "shop-123")).toEqual({
+      staffMemberId: "staff-9",
+    });
+  });
+
+  it("rejects a staff cookie edited to look like a manager's", () => {
+    const [shopId, expiresAt, , signature] = createStaffSessionCookie("shop-123", "staff-9").value.split(".");
+    expect(readStaffSession(`${shopId}.${expiresAt}.${signature}`, "shop-123")).toBeNull();
   });
 
   it("rejects a missing cookie", () => {

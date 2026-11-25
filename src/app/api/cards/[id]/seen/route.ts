@@ -1,24 +1,19 @@
 import { NextResponse } from "next/server";
 import { toCardJson } from "@/lib/card-json";
+import { getShopCard } from "@/lib/shop-card";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
 export async function POST(_request: Request, { params }: { params: { id: string } }) {
-  const supabase = getSupabaseAdmin();
-
-  const { data: existing, error: fetchError } = await supabase
-    .from("cards")
-    .select("redemptions")
-    .eq("id", params.id)
-    .single();
-
-  if (fetchError || !existing) {
+  const { shop, card } = await getShopCard(params.id);
+  if (!card) {
     return NextResponse.json({ error: "Card not found" }, { status: 404 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseAdmin()
     .from("cards")
-    .update({ last_seen_redemptions: existing.redemptions })
-    .eq("id", params.id)
+    .update({ last_seen_redemptions: card.redemptions })
+    .eq("id", card.id)
+    .eq("shop_id", shop.id)
     .select()
     .single();
 

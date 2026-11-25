@@ -8,10 +8,10 @@ describe("computeShopStats", () => {
   it("separates scanners, first-timers, returning and active customers", () => {
     const stats = computeShopStats(
       [
-        { lifetime_stamps: 0, redemptions: 0, last_stamped_at: null }, // scanned the sign, never bought
-        { lifetime_stamps: 1, redemptions: 0, last_stamped_at: daysAgo(40) }, // one visit, long ago
-        { lifetime_stamps: 2, redemptions: 0, last_stamped_at: daysAgo(3) }, // came back, recently
-        { lifetime_stamps: 11, redemptions: 1, last_stamped_at: daysAgo(30) }, // regular, exactly 30 days
+        { visits: 0, lifetime_stamps: 0, redemptions: 0, last_stamped_at: null }, // scanned the sign, never bought
+        { visits: 1, lifetime_stamps: 1, redemptions: 0, last_stamped_at: daysAgo(40) }, // one visit, long ago
+        { visits: 2, lifetime_stamps: 2, redemptions: 0, last_stamped_at: daysAgo(3) }, // came back, recently
+        { visits: 5, lifetime_stamps: 11, redemptions: 1, last_stamped_at: daysAgo(30) }, // regular, exactly 30 days
       ],
       NOW,
     );

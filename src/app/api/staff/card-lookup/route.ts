@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { toCardJson } from "@/lib/card-json";
 import { parseJsonBody } from "@/lib/parse-json-body";
 import { defaultPhoneCountryCode, normalizePhone } from "@/lib/phone";
-import { getShop } from "@/lib/shop-repo";
+import { getGroupShopIds, getShop } from "@/lib/shop-repo";
 import { STAFF_SESSION_COOKIE, verifyStaffSessionCookie } from "@/lib/staff-session";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
@@ -29,8 +29,9 @@ export async function POST(request: Request) {
   const { data, error } = await getSupabaseAdmin()
     .from("cards")
     .select()
-    .eq("shop_id", shop.id)
+    .in("shop_id", await getGroupShopIds(shop))
     .eq("phone", phone)
+    .limit(1)
     .maybeSingle();
 
   if (error) {

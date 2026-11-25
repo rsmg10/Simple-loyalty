@@ -20,6 +20,13 @@ function makeShop(overrides: Partial<Shop> = {}): Shop {
     pinLockedUntil: null,
     ownerUserId: null,
     slug: null,
+    rewardName: null,
+    brandColor: null,
+    logoUpdatedAt: null,
+    welcomeBonus: 0,
+    doubleStampWeekdays: [],
+    timezone: "Africa/Tripoli",
+    groupId: null,
     ...overrides,
   };
 }
@@ -32,6 +39,12 @@ describe("isAuthorizedForShopSettings", () => {
     expect(await isAuthorizedForShopSettings(shop, value)).toBe(true);
     expect(await isAuthorizedForShopSettings(shop, undefined)).toBe(false);
     expect(getOwnerUserId).not.toHaveBeenCalled();
+  });
+
+  it("never accepts a staff member's own PIN session, only the manager's", async () => {
+    const shop = makeShop({ ownerUserId: null });
+    const { value: staffMemberCookie } = createStaffSessionCookie(shop.id, "staff-1");
+    expect(await isAuthorizedForShopSettings(shop, staffMemberCookie)).toBe(false);
   });
 
   it("authorizes only the linked owner once one is set, ignoring the staff cookie", async () => {

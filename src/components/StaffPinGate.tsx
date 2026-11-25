@@ -5,9 +5,12 @@ import { useI18n } from "./I18nProvider";
 
 type StaffPinGateProps = {
   onUnlock: () => void;
+  // /setup: a staff member's own PIN signs in fine but can't manage the
+  // shop, so say so here instead of opening a dashboard that can't load.
+  requireManager?: boolean;
 };
 
-export default function StaffPinGate({ onUnlock }: StaffPinGateProps) {
+export default function StaffPinGate({ onUnlock, requireManager = false }: StaffPinGateProps) {
   const { t } = useI18n();
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +29,12 @@ export default function StaffPinGate({ onUnlock }: StaffPinGateProps) {
       });
 
       if (res.ok) {
+        const { role } = (await res.json().catch(() => ({}))) as { role?: string };
+        if (requireManager && role === "staff") {
+          setError(t.staff.managerOnly);
+          setPin("");
+          return;
+        }
         onUnlock();
       } else if (res.status === 429) {
         setError(t.staff.tooManyAttempts);

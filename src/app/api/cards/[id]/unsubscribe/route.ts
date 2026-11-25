@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { toCardJson } from "@/lib/card-json";
+import { getShop } from "@/lib/shop-repo";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
 export async function POST(_request: Request, { params }: { params: { id: string } }) {
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
+  const shop = await getShop();
+  const { data, error } = await getSupabaseAdmin()
     .from("cards")
     .update({ email: null })
     .eq("id", params.id)
+    .eq("shop_id", shop.id)
     .select()
     .single();
 

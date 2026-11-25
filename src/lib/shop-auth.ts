@@ -1,6 +1,6 @@
 import { getOwnerUserId } from "./owner-auth";
 import type { Shop } from "./shop-repo";
-import { verifyStaffSessionCookie } from "./staff-session";
+import { readStaffSession } from "./staff-session";
 
 // Gates shop-settings actions (PUT /api/shop, GET /api/shop/stats). Once a
 // shop has a real owner account linked (shop.ownerUserId set), that account
@@ -23,5 +23,7 @@ export async function isAuthorizedForShopSettings(
     return ownerUserId === shop.ownerUserId;
   }
 
-  return verifyStaffSessionCookie(staffSessionCookie, shop.id);
+  // The manager PIN only — staff members' own PINs can stamp, not manage
+  // the shop or see the customer list.
+  return readStaffSession(staffSessionCookie, shop.id)?.staffMemberId === null;
 }

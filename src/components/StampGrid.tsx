@@ -4,12 +4,14 @@ type StampGridProps = {
   stampsEarned: number;
   stampsRequired: number;
   label: string;
+  color?: string | null;
 };
 
 export default function StampGrid({
   stampsEarned,
   stampsRequired,
   label,
+  color,
 }: StampGridProps) {
   const stamps = Array.from({ length: stampsRequired }, (_, i) => i < stampsEarned);
 
@@ -20,7 +22,7 @@ export default function StampGrid({
       aria-label={label}
     >
       {stamps.map((filled, i) => (
-        <StampMark key={i} filled={filled} index={i} />
+        <StampMark key={i} filled={filled} index={i} color={color} />
       ))}
     </div>
   );

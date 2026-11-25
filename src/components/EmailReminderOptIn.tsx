@@ -2,17 +2,19 @@
 
 import { useState, type FormEvent } from "react";
 import { useI18n } from "./I18nProvider";
-import { setCardEmail } from "@/lib/card-store";
+import { removeCardEmail, setCardEmail } from "@/lib/card-store";
 
 type EmailReminderOptInProps = {
   cardId: string;
-  email?: string;
+  // Masked by the server (see toCardJson) — the full address never comes back.
+  emailHint?: string;
 };
 
-export default function EmailReminderOptIn({ cardId, email }: EmailReminderOptInProps) {
+export default function EmailReminderOptIn({ cardId, emailHint }: EmailReminderOptInProps) {
   const { t } = useI18n();
-  const [value, setValue] = useState(email ?? "");
-  const [saved, setSaved] = useState(false);
+  const [value, setValue] = useState("");
+  // undefined: follow the card as polled; null: just removed; string: just saved.
+  const [localHint, setLocalHint] = useState<string | null | undefined>(undefined);
   const [editing, setEditing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -23,30 +25,42 @@ export default function EmailReminderOptIn({ cardId, email }: EmailReminderOptIn
     const updated = await setCardEmail(cardId, value.trim());
     setSubmitting(false);
     if (updated) {
-      setSaved(true);
+      setLocalHint(updated.emailHint ?? null);
       setEditing(false);
+      setValue("");
     }
   }
 
-  const confirmedEmail = email ?? (saved ? value : null);
+  async function handleRemove() {
+    setSubmitting(true);
+    if (await removeCardEmail(cardId)) setLocalHint(null);
+    setSubmitting(false);
+  }
 
-  if (confirmedEmail && !editing) {
+  const confirmedHint = localHint === undefined ? emailHint : localHint;
+
+  if (confirmedHint && !editing) {
     return (
       <p className="text-body-sm text-muted">
         {t.email.savedPrefix}{" "}
         <bdi dir="ltr" className="text-ink">
-          {confirmedEmail}
+          {confirmedHint}
         </bdi>{" "}
         {t.email.savedSuffix}{" "}
         <button
           type="button"
-          onClick={() => {
-            setValue(confirmedEmail);
-            setEditing(true);
-          }}
+          onClick={() => setEditing(true)}
           className="font-semibold text-ink underline underline-offset-2"
         >
           {t.email.change}
+        </button>{" "}
+        <button
+          type="button"
+          onClick={handleRemove}
+          disabled={submitting}
+          className="font-semibold text-ink underline underline-offset-2 disabled:opacity-60"
+        >
+          {t.email.remove}
         </button>
       </p>
     );

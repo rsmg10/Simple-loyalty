@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { toCardJson } from "@/lib/card-json";
 import { parseJsonBody } from "@/lib/parse-json-body";
+import { getShop } from "@/lib/shop-repo";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -12,11 +13,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
   const email = body.email.trim();
 
+  const shop = await getShop();
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("cards")
     .update({ email })
     .eq("id", params.id)
+    .eq("shop_id", shop.id)
     .select()
     .single();
 

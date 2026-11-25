@@ -9,6 +9,10 @@ export type CardRow = {
   last_seen_redemptions: number;
   email: string | null;
   phone?: string | null;
+  rewards_used?: number;
+  visits?: number;
+  lifetime_stamps?: number;
+  last_stamped_at?: string | null;
 };
 
 export type CardJson = {
@@ -16,10 +20,13 @@ export type CardJson = {
   stampsEarned: number;
   stampsRequired: number;
   redemptions: number;
+  // Earned but not yet handed over — saved for a later visit.
+  rewardsAvailable: number;
   lastSeenRedemptions: number;
-  email?: string;
-  // Masked — the card id is the only credential a card has, so the full
+  // Both masked — the card id is the only credential a card has (it's in
+  // the QR code anyone at the counter can photograph), so the full email or
   // number never goes back out to whoever holds it.
+  emailHint?: string;
   phoneHint?: string;
 };
 
@@ -29,10 +36,19 @@ export function toCardJson(row: CardRow): CardJson {
     stampsEarned: row.stamps_earned,
     stampsRequired: row.stamps_required,
     redemptions: row.redemptions,
+    rewardsAvailable: Math.max(0, row.redemptions - (row.rewards_used ?? row.redemptions)),
     lastSeenRedemptions: row.last_seen_redemptions,
-    email: row.email ?? undefined,
+    emailHint: row.email ? maskEmail(row.email) : undefined,
     phoneHint: row.phone ? maskPhone(row.phone) : undefined,
   };
+}
+
+// "ahmed@gmail.com" → "a•••@gmail.com": recognisable to its owner, useless
+// to anyone else.
+export function maskEmail(email: string): string {
+  const at = email.lastIndexOf("@");
+  if (at <= 0) return "•••";
+  return `${email[0]}•••${email.slice(at)}`;
 }
 
 // A card rolls over to a redemption the moment it hits its stamp

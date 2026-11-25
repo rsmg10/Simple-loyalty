@@ -23,3 +23,16 @@ export async function selectAllShopCards<T>(
     if (data.length < PAGE_SIZE) return rows;
   }
 }
+
+// Same paging for any query: `fetchPage(from, to)` returns one range.
+export async function selectAllPages<T>(
+  fetchPage: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: unknown }>,
+): Promise<T[] | null> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await fetchPage(from, from + PAGE_SIZE - 1);
+    if (error || !data) return null;
+    rows.push(...(data as T[]));
+    if (data.length < PAGE_SIZE) return rows;
+  }
+}

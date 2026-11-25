@@ -2,10 +2,12 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { useI18n } from "@/components/I18nProvider";
 
 type Status = "pending" | "done" | "error";
 
 function UnsubscribeContent() {
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const cardId = searchParams.get("card");
   const [status, setStatus] = useState<Status>("pending");
@@ -23,26 +25,21 @@ function UnsubscribeContent() {
 
   return (
     <div className="w-full max-w-sm rounded-lg border border-hairline bg-canvas p-xl text-center">
-      {status === "pending" && <p className="text-body-md text-muted">Unsubscribing…</p>}
+      {status === "pending" && <p className="text-body-md text-muted">{t.unsubscribe.pending}</p>}
       {status === "done" && (
         <>
           <h1 className="text-display-sm font-medium tracking-display-sm text-ink">
-            You&apos;re unsubscribed
+            {t.unsubscribe.doneTitle}
           </h1>
-          <p className="mt-xs text-body-sm text-muted">
-            We won&apos;t email you any more stamp reminders. Your card still works as normal.
-          </p>
+          <p className="mt-xs text-body-sm text-muted">{t.unsubscribe.doneBody}</p>
         </>
       )}
       {status === "error" && (
         <>
           <h1 className="text-display-sm font-medium tracking-display-sm text-ink">
-            Couldn&apos;t unsubscribe
+            {t.unsubscribe.errorTitle}
           </h1>
-          <p className="mt-xs text-body-sm text-muted">
-            That link looks invalid or expired. You can also stop reminders any time from your
-            stamp card page.
-          </p>
+          <p className="mt-xs text-body-sm text-muted">{t.unsubscribe.errorBody}</p>
         </>
       )}
     </div>

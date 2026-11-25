@@ -1,15 +1,22 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { clearLoginAttempts, getLoginAttempts, saveLoginAttempts } from "@/lib/login-attempts-repo";
+import { CLIENT_LIMITS, afterFailure, clientIp, clientKey, isLocked } from "@/lib/login-throttle";
 import { parseJsonBody } from "@/lib/parse-json-body";
 import { getShop, isPinLocked, recordFailedPinAttempt, resetPinAttempts } from "@/lib/shop-repo";
+import { findStaffByPin } from "@/lib/staff-repo";
 import { STAFF_SESSION_COOKIE, createStaffSessionCookie } from "@/lib/staff-session";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   const shop = await getShop();
+  const secret = process.env.STAFF_SESSION_SECRET;
+  if (!secret) throw new Error("STAFF_SESSION_SECRET must be set");
+  const client = clientKey(clientIp(request.headers), secret);
+  const clientAttempts = await getLoginAttempts(shop.id, client);
 
-  if (isPinLocked(shop)) {
+  if (isPinLocked(shop) || isLocked(clientAttempts)) {
     return NextResponse.json(
       { error: "Too many incorrect attempts. Try again in a few minutes." },
       { status: 429 },
@@ -22,15 +29,23 @@ export async function POST(request: Request) {
   }
   const { pin } = body;
 
-  if (typeof pin !== "string" || !(await bcrypt.compare(pin, shop.staffPinHash))) {
-    await recordFailedPinAttempt(shop);
+  // The shop's own PIN signs in as manager; a staff member's PIN as them.
+  let staffMemberId: string | null = null;
+  const isManager = typeof pin === "string" && (await bcrypt.compare(pin, shop.staffPinHash));
+  if (!isManager && typeof pin === "string") staffMemberId = await findStaffByPin(shop.id, pin);
+
+  if (!isManager && !staffMemberId) {
+    await Promise.all([
+      saveLoginAttempts(shop.id, client, afterFailure(clientAttempts, CLIENT_LIMITS)),
+      recordFailedPinAttempt(shop),
+    ]);
     return NextResponse.json({ error: "Incorrect PIN" }, { status: 401 });
   }
 
-  await resetPinAttempts(shop);
+  await Promise.all([resetPinAttempts(shop), clearLoginAttempts(shop.id, client)]);
 
-  const { value, maxAge } = createStaffSessionCookie(shop.id);
-  const response = NextResponse.json({ ok: true });
+  const { value, maxAge } = createStaffSessionCookie(shop.id, staffMemberId);
+  const response = NextResponse.json({ ok: true, role: staffMemberId ? "staff" : "manager" });
   response.cookies.set(STAFF_SESSION_COOKIE, value, {
     httpOnly: true,
     sameSite: "lax",

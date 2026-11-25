@@ -40,3 +40,22 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   return NextResponse.json(toCardJson(data));
 }
+
+// The customer withdrawing their number — card recovery and the café's
+// WhatsApp list both stop including them.
+export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
+  const shop = await getShop();
+  const { data, error } = await getSupabaseAdmin()
+    .from("cards")
+    .update({ phone: null })
+    .eq("id", params.id)
+    .eq("shop_id", shop.id)
+    .select()
+    .single();
+
+  if (error || !data) {
+    return NextResponse.json({ error: "Card not found" }, { status: 404 });
+  }
+
+  return NextResponse.json(toCardJson(data));
+}

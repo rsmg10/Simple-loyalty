@@ -97,11 +97,12 @@ the default `*.vercel.app` URL:
 
 ## Language
 
-The customer card, counter sign, staff screen and `/setup` are available in
-Arabic (right-to-left) and English. `DEFAULT_LOCALE` picks the language a
+Every page — customer card, counter sign, staff screen, `/setup`, owner
+sign-up/login and shop creation — is available in Arabic (right-to-left)
+and English. `DEFAULT_LOCALE` picks the language a
 first-time visitor sees; a toggle at the bottom of each page switches it,
-and the choice is remembered on that device (a `locale` cookie). Owner
-sign-up/login/onboarding pages and reminder emails are English-only for now.
+and the choice is remembered on that device (a `locale` cookie). Reminder
+emails are English-only for now.
 
 ## Home screen
 
@@ -119,25 +120,71 @@ Icons are generated from `public/icon.svg` by
 `node scripts/generate-app-icons.mjs`; replace the SVG with the café's logo
 and re-run it.
 
+## Staff, rewards and undo
+
+- **Staff accounts.** The shop's own PIN is the **manager PIN**: it stamps
+  and opens `/setup`. In `/setup` → Staff, give each barista their own PIN
+  (4–8 digits, unique in the shop). Staff PINs can stamp and hand out
+  rewards but can't open `/setup`, and everything they do appears in the
+  activity log under their name. Turning a PIN off keeps their history.
+- **Saved rewards.** Completing a card *earns* a reward; it isn't used until
+  staff tap "Use a reward now" (straight away, or on a later visit). The
+  customer's card shows rewards waiting.
+- **Undo.** After stamping or handing over a reward, staff can undo it for
+  10 minutes, as long as nothing newer happened on that card. Older
+  mistakes: `/setup` → Customers → find the card → set its stamp count.
+- **Promotions.** In Settings: a welcome bonus (extra stamps on a first
+  visit) and double-stamp weekdays (in the café's timezone, Africa/Tripoli
+  by default). The card, staff screen and counter sign all show them.
+- **Branding.** Settings: the reward's name ("a free dessert"…), a card
+  colour, and a logo (resized in the browser and stored with the shop).
+
+All card changes go through database functions (migration `0005`), so two
+staff stamping the same card at once can't lose a stamp, and every change is
+logged in `stamp_events`.
+
+### Branches
+
+Branches of one café can share cards: a card from any branch can be looked
+up, stamped and its rewards used at the others. Each branch is its own shop
+(multi-tenant mode, its own subdomain and staff); link them in the SQL
+editor with one shared id:
+
+```sql
+update shops set group_id = gen_random_uuid() where slug = 'main-branch';
+update shops set group_id = (select group_id from shops where slug = 'main-branch') where slug = 'second-branch';
+```
+
+Settings, staff, stats and the activity log stay per branch.
+
 ## Dashboard and customer list
 
-`/setup` shows, besides the totals:
+`/setup` has four tabs: **Overview** (totals and an 8-week chart of
+visits, new customers and rewards used), **Customers**, **Staff** (staff
+PINs and the activity log) and **Settings**. Besides the totals it shows:
 
-- **Returning customers** — cards with 2 or more stamps — and the **return
-  rate**: returning ÷ customers with at least one stamp. There's no
-  per-visit log, so two stamps on a first visit count as returning too.
+- **Returning customers** — stamped on 2 or more separate visits (one visit
+  per scan, however many stamps) — and the **return rate**: returning ÷
+  customers with at least one stamp. Cards from before visits were tracked
+  count one visit per stamp.
 - **Active (30 days)** — cards stamped in the last 30 days. Only stamps
   given after migration `0003` count, so this starts low on an existing
   database.
+- **Who to message today** — customers one stamp from a reward, with a
+  reward waiting, or regulars who haven't come in 30+ days, each with a
+  WhatsApp button and a ready-written message in the viewer's language.
+  The owner sends it from their own phone; no messaging service or cost.
+- **Find a customer** — by phone or card code: their card, visits and
+  history; set their stamp count; or delete the card and its history.
 - **Message customers** — every customer who added a phone number, most
   recent visit first, each with a WhatsApp button (`wa.me` link, optionally
   pre-filled with a message typed once at the top) and a "copy all numbers"
   button for building a WhatsApp broadcast list. Customers are told when
   they add their number that the café may message them.
 
-Without a linked owner account, `/setup` — including this list of full
-phone numbers — is unlocked by the staff PIN, so anyone with the PIN can
-see it. Link an owner account to keep it to the owner.
+Without a linked owner account, `/setup` — including these lists of full
+phone numbers — is unlocked by the manager PIN. Give staff their own PINs
+so the manager PIN stays with the owner.
 
 ## Customer phone numbers
 
@@ -253,13 +300,28 @@ customers outside your test users.
   directly in the Supabase SQL editor:
   ```sql
   update shops set staff_pin_hash = crypt('NEW-PIN', gen_salt('bf')), failed_pin_attempts = 0, pin_locked_until = null;
+  delete from staff_login_attempts;
   ```
-- **Staff PIN lockout.** After 5 wrong PIN attempts in a row, `/staff` locks
-  out further attempts for 5 minutes (even with the correct PIN) — protects
-  against someone guessing a 4-digit PIN by brute force. This resets
-  automatically; no action needed unless staff are actually locked out and
-  need in sooner, in which case run the SQL above.
-- **A customer wants their data removed.** Their card row can be deleted
+- **Staff PIN lockout.** Two levels, both lifting by themselves after 15
+  minutes (even the correct PIN is refused meanwhile):
+  - **Per device:** 5 wrong PINs in a row lock out *that device* (by IP
+    address, stored only as a keyed hash). Someone at a table can't lock the
+    staff out by typing wrong PINs on their own phone, unless they're on the
+    same Wi-Fi as the staff phone, which shares its public IP.
+  - **Whole café:** 20 wrong PINs in a row across all devices lock new logins
+    for everyone. This slows down guessing from many devices at once.
+
+  Staff already signed in (sessions last 12 hours) are never affected, so
+  signing in at the start of a shift sidesteps it entirely. To lift a
+  lockout early without changing the PIN:
+  ```sql
+  update shops set failed_pin_attempts = 0, pin_locked_until = null;
+  delete from staff_login_attempts;
+  ```
+- **A customer wants their data removed.** They can remove their phone
+  number or email themselves from the card (linked from the card's
+  [privacy page](src/app/privacy/page.tsx)). For the whole card: `/setup` →
+  Customers → find it → "Delete this card". Or in SQL, the row can be deleted
   directly in Supabase (`delete from cards where id = '...'`); the card id
   is the code printed under their QR code.
 - **Owner authentication.** Optional and opt-in per shop — set

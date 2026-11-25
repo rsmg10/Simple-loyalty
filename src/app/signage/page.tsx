@@ -11,7 +11,9 @@ import { useShopConfig } from "@/lib/shop-config";
 // scan their way in.
 export default function SignagePage() {
   const { t } = useI18n();
-  const { shopName, stampsRequired, loading } = useShopConfig();
+  const { shopName, stampsRequired, rewardName, logoUrl, welcomeBonus, doubleStampWeekdays, loading } = useShopConfig();
+  const reward = rewardName ?? t.defaults.reward;
+  const doubleDays = t.listJoin(doubleStampWeekdays.map((day) => t.weekdays[day]));
   // Same pattern as the unsubscribe link in src/lib/email.ts: a missing
   // NEXT_PUBLIC_APP_URL is an explicit misconfiguration, surfaced as-is
   // rather than silently substituted with window.location.origin (which
@@ -21,6 +23,10 @@ export default function SignagePage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-md bg-canvas p-lg py-xxl print:p-0">
       <div className="w-full max-w-md rounded-lg border border-hairline bg-canvas p-xl text-center print:border-0">
+        {logoUrl && (
+          // eslint-disable-next-line @next/next/no-img-element -- tiny, already-sized image from our own API
+          <img src={logoUrl} alt="" width={72} height={72} className="mx-auto mb-sm h-[72px] w-[72px] rounded-lg object-cover" />
+        )}
         <p className="text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted">
           {loading ? t.signage.loading : shopName || t.signage.fallbackName}
         </p>
@@ -37,8 +43,10 @@ export default function SignagePage() {
         </div>
 
         <p className="mt-lg text-body-md text-ink">
-          {t.signage.reward(stampsRequired)}
+          {t.signage.reward(stampsRequired, reward)}
         </p>
+        {doubleDays && <p className="mt-xs text-body-md font-semibold text-ink">{t.signage.doubleDays(doubleDays)}</p>}
+        {welcomeBonus > 0 && <p className="mt-xs text-body-sm text-muted">{t.signage.welcome(welcomeBonus)}</p>}
       </div>
       <LanguageToggle />
     </main>

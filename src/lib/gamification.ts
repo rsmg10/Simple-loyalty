@@ -1,7 +1,12 @@
 import type { Locale } from "./i18n/locale";
 import { messages } from "./i18n/messages";
 
-export function getEncouragementCopy(stampsEarned: number, stampsRequired: number, locale: Locale = "en"): string {
+export function getEncouragementCopy(
+  stampsEarned: number,
+  stampsRequired: number,
+  locale: Locale = "en",
+  reward: string = messages[locale].defaults.reward,
+): string {
   // A card is reset to 0 the moment it's completed (see the stamp route
   // handler at src/app/api/cards/[id]/stamp/route.ts), so `remaining === 0`
   // can never actually be observed here — the "just redeemed" celebration
@@ -10,13 +15,13 @@ export function getEncouragementCopy(stampsEarned: number, stampsRequired: numbe
   const copy = messages[locale].encouragement;
 
   if (remaining === 1) {
-    return copy.oneLeft;
+    return copy.oneLeft(reward);
   }
   if (stampsEarned === 0) {
-    return copy.start(remaining);
+    return copy.start(remaining, reward);
   }
   if (stampsEarned / stampsRequired >= 0.5) {
-    return copy.halfway(remaining);
+    return copy.halfway(remaining, reward);
   }
-  return copy.more(remaining);
+  return copy.more(remaining, reward);
 }

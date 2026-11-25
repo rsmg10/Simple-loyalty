@@ -12,8 +12,11 @@ import {
   getCard,
   isCardId,
   lookupCardByPhone,
+  redeemReward,
+  undoStaffAction,
   type CardRecord,
 } from "@/lib/card-store";
+import { useShopConfig } from "@/lib/shop-config";
 
 type ScanState =
   | { status: "scanning" }
@@ -22,10 +25,23 @@ type ScanState =
   // doesn't have the card on the phone in front of them — offer to move it.
   // `count` = stamps for this purchase (several coffees, one scan).
   | { status: "confirm"; cardId: string; card: CardRecord; manual: boolean; count: number }
-  | { status: "success"; card: CardRecord; added: number; rewards: number };
+  // `eventId` = the log entry, so the action can be undone from here.
+  | {
+      status: "success";
+      kind: "stamp" | "redeem";
+      card: CardRecord;
+      added: number;
+      bonus: number;
+      rewardsEarned: number;
+      eventId: string | null;
+      undoFailed: boolean;
+    }
+  | { status: "undone" };
 
 export default function StampScanner() {
   const { t } = useI18n();
+  const config = useShopConfig();
+  const reward = config.rewardName ?? t.defaults.reward;
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -114,10 +130,47 @@ export default function StampScanner() {
     }
     setState({
       status: "success",
+      kind: "stamp",
       card: updated,
       added: state.count,
-      rewards: updated.redemptions - previousRedemptions,
+      bonus: updated.bonus ?? 0,
+      rewardsEarned: updated.redemptions - previousRedemptions,
+      eventId: updated.eventId,
+      undoFailed: false,
     });
+  }
+
+  async function handleRedeem(cardId: string) {
+    const { result, status } = await redeemReward(cardId);
+    if (status === 401) {
+      window.location.reload();
+      return;
+    }
+    if (!result) {
+      // No reward left (someone used it a moment ago) or the card vanished.
+      setState({ status: "not-found" });
+      return;
+    }
+    setState({
+      status: "success",
+      kind: "redeem",
+      card: result,
+      added: 0,
+      bonus: 0,
+      rewardsEarned: 0,
+      eventId: result.eventId,
+      undoFailed: false,
+    });
+  }
+
+  async function handleUndo() {
+    if (state.status !== "success" || !state.eventId) return;
+    const { card, status } = await undoStaffAction(state.eventId);
+    if (status === 401) {
+      window.location.reload();
+      return;
+    }
+    setState(card ? { status: "undone" } : { ...state, undoFailed: true });
   }
 
   function changeCount(delta: number) {
@@ -159,7 +212,7 @@ export default function StampScanner() {
 
   return (
     <div className="relative w-full max-w-sm overflow-hidden rounded-lg border border-hairline bg-canvas p-xl">
-      {state.status === "success" && state.rewards > 0 && <Confetti />}
+      {state.status === "success" && state.rewardsEarned > 0 && <Confetti />}
 
       <p className="text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted">
         {t.staff.scanEyebrow}
@@ -246,6 +299,23 @@ export default function StampScanner() {
               📱 <bdi dir="ltr">{state.card.phoneHint}</bdi>
             </p>
           )}
+          {config.doubleStampsToday && (
+            <p className="mt-xs text-body-sm font-semibold text-ink">{t.staff.doubleTodayBadge}</p>
+          )}
+          {state.card.rewardsAvailable > 0 && (
+            <div className="mt-md rounded-md border border-hairline bg-surface-soft p-sm">
+              <p className="text-body-sm font-semibold text-ink">
+                {t.staff.rewardsAvailable(state.card.rewardsAvailable, reward)}
+              </p>
+              <button
+                type="button"
+                onClick={() => handleRedeem(state.cardId)}
+                className="mt-xs h-11 w-full rounded-md border border-ink text-button font-semibold text-ink"
+              >
+                {t.staff.useReward}
+              </button>
+            </div>
+          )}
           <div className="mt-md flex items-center justify-between gap-sm rounded-md border border-hairline p-xs">
             <span className="ps-xs text-body-sm text-muted">{t.staff.stampCount}</span>
             <div className="flex items-center gap-xs">
@@ -294,13 +364,13 @@ export default function StampScanner() {
         <>
           <div
             className={`animate-stamp-enter mt-xxs flex h-11 w-11 items-center justify-center rounded-full ${
-              state.rewards > 0 ? "bg-brand-ochre" : "bg-primary"
+              state.rewardsEarned > 0 || state.kind === "redeem" ? "bg-brand-ochre" : "bg-primary"
             }`}
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path
                 d="M4 10.5L8 14.5L16 5.5"
-                stroke={state.rewards > 0 ? "#0a0a0a" : "#fffaf0"}
+                stroke={state.rewardsEarned > 0 || state.kind === "redeem" ? "#0a0a0a" : "#fffaf0"}
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -308,17 +378,62 @@ export default function StampScanner() {
             </svg>
           </div>
           <h1 className="mt-sm text-display-sm font-medium tracking-display-sm text-ink">
-            {state.rewards > 0 ? t.staff.rewardRedeemed : t.staff.stampsAdded(state.added)}
+            {state.kind === "redeem"
+              ? t.staff.rewardUsed
+              : state.rewardsEarned > 0
+                ? t.staff.cardComplete(state.rewardsEarned)
+                : t.staff.stampsAdded(state.added)}
           </h1>
-          {state.rewards > 0 && (
-            <p className="mt-xxs text-title-sm font-semibold text-ink">
-              {t.staff.giveRewards(state.rewards)}
-            </p>
+          {state.kind === "redeem" && (
+            <p className="mt-xxs text-title-sm font-semibold text-ink">{t.staff.giveReward(reward)}</p>
           )}
+          {state.kind === "stamp" && state.rewardsEarned > 0 && (
+            <p className="mt-xxs text-body-md text-ink">{t.staff.rewardSaved(reward)}</p>
+          )}
+          {state.bonus > 0 && <p className="mt-xxs text-body-sm text-muted">{t.staff.bonusStamps(state.bonus)}</p>}
           <p className="mt-xs font-mono text-title-lg font-semibold tabular-nums text-ink">
             <span dir="ltr">
               {state.card.stampsEarned} / {state.card.stampsRequired}
             </span>
+          </p>
+
+          {state.kind === "stamp" && state.card.rewardsAvailable > 0 && (
+            <button
+              type="button"
+              onClick={() => handleRedeem(state.card.id)}
+              className="mt-lg h-11 w-full rounded-md border border-ink text-button font-semibold text-ink"
+            >
+              {t.staff.useReward}
+            </button>
+          )}
+          <button
+            onClick={scanNext}
+            className={`${state.kind === "stamp" && state.card.rewardsAvailable > 0 ? "mt-sm" : "mt-lg"} h-11 w-full rounded-md bg-primary text-button font-semibold text-on-primary`}
+          >
+            {t.staff.scanNext}
+          </button>
+          {state.eventId &&
+            (state.undoFailed ? (
+              <p className="mt-sm text-body-sm text-muted" role="alert">
+                {t.staff.undoFailed}
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={handleUndo}
+                className="mt-sm w-full text-body-sm text-muted underline underline-offset-2"
+              >
+                {t.staff.undo}
+              </button>
+            ))}
+        </>
+      )}
+
+      {state.status === "undone" && (
+        <>
+          <h1 className="mt-xxs text-display-sm font-medium tracking-display-sm text-ink">{t.staff.undo}</h1>
+          <p className="mt-xs text-body-md text-ink" role="status">
+            {t.staff.undone}
           </p>
           <button
             onClick={scanNext}

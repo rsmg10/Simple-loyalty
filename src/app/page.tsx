@@ -11,7 +11,8 @@ const CELEBRATION_DURATION_MS = 2200;
 
 export default function Home() {
   const { t } = useI18n();
-  const { shopName, appleWalletEnabled, googleWalletEnabled, emailRemindersEnabled } = useShopConfig();
+  const config = useShopConfig();
+  const { shopName, appleWalletEnabled, googleWalletEnabled, emailRemindersEnabled } = config;
   const { cardId, card, loadError, retry } = useOwnCard({
     confirmReplace: () => window.confirm(t.card.replaceConfirm),
   });
@@ -35,7 +36,13 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center justify-center gap-md bg-canvas p-lg py-xxl">
       {cardId && card ? (
         <LoyaltyCard
-          shop={{ name: shopName }}
+          shop={{
+            name: shopName,
+            rewardName: config.rewardName,
+            brandColor: config.brandColor,
+            logoUrl: config.logoUrl,
+            doubleStampsToday: config.doubleStampsToday,
+          }}
           card={card}
           cardId={cardId}
           justRedeemed={justRedeemed}

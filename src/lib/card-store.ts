@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isCardId } from "./card-id";
 
 const CARD_ID_KEY = "loyalty_card_id";
 const POLL_INTERVAL_MS = 5000;
@@ -8,19 +9,16 @@ const POLL_INTERVAL_MS = 5000;
 // shows as a QR code.
 export const SHARED_CARD_PARAM = "card";
 
-const CARD_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export function isCardId(value: string): boolean {
-  return CARD_ID_PATTERN.test(value);
-}
+export { isCardId };
 
 export type CardRecord = {
   id: string;
   stampsEarned: number;
   stampsRequired: number;
   redemptions: number;
+  rewardsAvailable: number;
   lastSeenRedemptions: number;
-  email?: string;
+  emailHint?: string;
   phoneHint?: string;
 };
 
@@ -34,7 +32,11 @@ export async function getCard(cardId: string): Promise<CardRecord | null> {
   return fetchCard(cardId);
 }
 
-export async function addStamps(cardId: string, count: number): Promise<CardRecord | null> {
+// What staff actions return: the updated card plus the log entry, so the
+// action can be undone from the counter.
+export type StaffActionResult = CardRecord & { eventId: string | null; bonus?: number };
+
+export async function addStamps(cardId: string, count: number): Promise<StaffActionResult | null> {
   const res = await fetch(`/api/cards/${cardId}/stamp`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -42,6 +44,24 @@ export async function addStamps(cardId: string, count: number): Promise<CardReco
   });
   if (!res.ok) return null;
   return res.json();
+}
+
+export async function redeemReward(cardId: string): Promise<{ result: StaffActionResult | null; status: number }> {
+  try {
+    const res = await fetch(`/api/cards/${cardId}/redeem`, { method: "POST" });
+    return { result: res.ok ? await res.json() : null, status: res.status };
+  } catch {
+    return { result: null, status: 0 };
+  }
+}
+
+export async function undoStaffAction(eventId: string): Promise<{ card: CardRecord | null; status: number }> {
+  try {
+    const res = await fetch(`/api/stamp-events/${eventId}/undo`, { method: "POST" });
+    return { card: res.ok ? await res.json() : null, status: res.status };
+  } catch {
+    return { card: null, status: 0 };
+  }
 }
 
 export async function setCardEmail(cardId: string, email: string): Promise<CardRecord | null> {
@@ -52,6 +72,22 @@ export async function setCardEmail(cardId: string, email: string): Promise<CardR
   });
   if (!res.ok) return null;
   return res.json();
+}
+
+export async function removeCardEmail(cardId: string): Promise<boolean> {
+  try {
+    return (await fetch(`/api/cards/${cardId}/unsubscribe`, { method: "POST" })).ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function removeCardPhone(cardId: string): Promise<boolean> {
+  try {
+    return (await fetch(`/api/cards/${cardId}/phone`, { method: "DELETE" })).ok;
+  } catch {
+    return false;
+  }
 }
 
 export type SetPhoneResult =

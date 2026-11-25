@@ -1,9 +1,11 @@
 import { headers } from "next/headers";
+import { SHOP_LIMITS, afterFailure, isLocked, type AttemptState } from "./login-throttle";
 import { getSupabaseAdmin } from "./supabase";
 
 const SHOP_SLUG_HEADER = "x-shop-slug";
+// Not logo_data_url: that's the image itself, only read by /api/shop/logo.
 const SHOP_COLUMNS =
-  "id, name, stamps_required, staff_pin_hash, failed_pin_attempts, pin_locked_until, owner_user_id, slug";
+  "id, name, stamps_required, staff_pin_hash, failed_pin_attempts, pin_locked_until, owner_user_id, slug, reward_name, brand_color, logo_updated_at, welcome_bonus, double_stamp_weekdays, timezone, group_id";
 
 export type Shop = {
   id: string;
@@ -14,6 +16,13 @@ export type Shop = {
   pinLockedUntil: string | null;
   ownerUserId: string | null;
   slug: string | null;
+  rewardName: string | null;
+  brandColor: string | null;
+  logoUpdatedAt: string | null;
+  welcomeBonus: number;
+  doubleStampWeekdays: number[];
+  timezone: string;
+  groupId: string | null;
 };
 
 function toShop(data: {
@@ -25,6 +34,13 @@ function toShop(data: {
   pin_locked_until: string | null;
   owner_user_id: string | null;
   slug: string | null;
+  reward_name: string | null;
+  brand_color: string | null;
+  logo_updated_at: string | null;
+  welcome_bonus: number;
+  double_stamp_weekdays: number[];
+  timezone: string;
+  group_id: string | null;
 }): Shop {
   return {
     id: data.id,
@@ -35,11 +51,16 @@ function toShop(data: {
     pinLockedUntil: data.pin_locked_until,
     ownerUserId: data.owner_user_id,
     slug: data.slug,
+    rewardName: data.reward_name,
+    brandColor: data.brand_color,
+    logoUpdatedAt: data.logo_updated_at,
+    welcomeBonus: data.welcome_bonus,
+    doubleStampWeekdays: data.double_stamp_weekdays,
+    timezone: data.timezone,
+    groupId: data.group_id,
   };
 }
 
-const MAX_FAILED_PIN_ATTEMPTS = 5;
-const PIN_LOCKOUT_MS = 5 * 60 * 1000;
 
 // Reads the shop the current request resolved to. middleware.ts sets the
 // x-shop-slug header for a request to a known subdomain — when present,
@@ -62,7 +83,9 @@ export async function getShop(): Promise<Shop> {
   } else if (process.env.APP_ROOT_DOMAIN) {
     throw new Error("No shop resolved for this request");
   } else {
-    query = query.limit(1);
+    // Single-café deployments have one shop; ordering keeps it the same
+    // one even if a second row ever appears (e.g. inserted by hand).
+    query = query.order("created_at").limit(1);
   }
 
   const { data, error } = await query.single();
@@ -89,21 +112,23 @@ export async function getShopByOwnerUserId(ownerUserId: string): Promise<Shop | 
   return toShop(data);
 }
 
+// The shop-wide backstop (see login-throttle.ts); per-client limits live in
+// login-attempts-repo.ts.
+function shopAttemptState(shop: Shop): AttemptState {
+  return { failedAttempts: shop.failedPinAttempts, lockedUntil: shop.pinLockedUntil };
+}
+
 export function isPinLocked(shop: Shop): boolean {
-  return !!shop.pinLockedUntil && new Date(shop.pinLockedUntil).getTime() > Date.now();
+  return isLocked(shopAttemptState(shop));
 }
 
 export async function recordFailedPinAttempt(shop: Shop): Promise<void> {
-  const attempts = shop.failedPinAttempts + 1;
-  const update: { failed_pin_attempts: number; pin_locked_until?: string } = {
-    failed_pin_attempts: attempts,
-  };
-  if (attempts >= MAX_FAILED_PIN_ATTEMPTS) {
-    update.pin_locked_until = new Date(Date.now() + PIN_LOCKOUT_MS).toISOString();
-  }
-
+  const next = afterFailure(shopAttemptState(shop), SHOP_LIMITS);
   const supabase = getSupabaseAdmin();
-  await supabase.from("shops").update(update).eq("id", shop.id);
+  await supabase
+    .from("shops")
+    .update({ failed_pin_attempts: next.failedAttempts, pin_locked_until: next.lockedUntil })
+    .eq("id", shop.id);
 }
 
 export async function resetPinAttempts(shop: Shop): Promise<void> {
@@ -112,4 +137,12 @@ export async function resetPinAttempts(shop: Shop): Promise<void> {
     .from("shops")
     .update({ failed_pin_attempts: 0, pin_locked_until: null })
     .eq("id", shop.id);
+}
+
+// This shop and every branch in its group — where a card may be looked up
+// and used (see card_belongs_to_shop in migration 0005).
+export async function getGroupShopIds(shop: Shop): Promise<string[]> {
+  if (!shop.groupId) return [shop.id];
+  const { data } = await getSupabaseAdmin().from("shops").select("id").eq("group_id", shop.groupId);
+  return data?.map((row) => row.id) ?? [shop.id];
 }

@@ -8,5 +8,5 @@ import StaffPinGate from "@/components/StaffPinGate";
 // an owner account (shop.ownerUserId unset) stays on this path forever.
 export default function SetupPinFlow() {
   const [unlocked, setUnlocked] = useState(false);
-  return unlocked ? <ShopSetupForm /> : <StaffPinGate onUnlock={() => setUnlocked(true)} />;
+  return unlocked ? <ShopSetupForm /> : <StaffPinGate requireManager onUnlock={() => setUnlocked(true)} />;
 }

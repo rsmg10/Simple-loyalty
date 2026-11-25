@@ -16,7 +16,7 @@ export default async function SetupPage() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-md bg-canvas p-lg py-xxl">
         {isOwner ? (
-          <div className="w-full max-w-sm">
+          <div className="w-full max-w-md">
             <div className="mb-md flex justify-end">
               <OwnerSignOutButton />
             </div>

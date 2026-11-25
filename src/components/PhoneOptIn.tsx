@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useI18n } from "./I18nProvider";
-import { setCardPhone } from "@/lib/card-store";
+import { removeCardPhone, setCardPhone } from "@/lib/card-store";
 
 type PhoneOptInProps = {
   cardId: string;
@@ -12,7 +12,8 @@ type PhoneOptInProps = {
 export default function PhoneOptIn({ cardId, phoneHint }: PhoneOptInProps) {
   const { t } = useI18n();
   const [value, setValue] = useState("");
-  const [savedHint, setSavedHint] = useState<string | null>(null);
+  // undefined: follow the card as polled; null: just removed; string: just saved.
+  const [localHint, setLocalHint] = useState<string | null | undefined>(undefined);
   const [editing, setEditing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +26,7 @@ export default function PhoneOptIn({ cardId, phoneHint }: PhoneOptInProps) {
     const result = await setCardPhone(cardId, value.trim());
     setSubmitting(false);
     if (result.ok) {
-      setSavedHint(result.card.phoneHint ?? null);
+      setLocalHint(result.card.phoneHint ?? null);
       setEditing(false);
       setValue("");
     } else {
@@ -33,7 +34,13 @@ export default function PhoneOptIn({ cardId, phoneHint }: PhoneOptInProps) {
     }
   }
 
-  const confirmedHint = savedHint ?? phoneHint;
+  async function handleRemove() {
+    setSubmitting(true);
+    if (await removeCardPhone(cardId)) setLocalHint(null);
+    setSubmitting(false);
+  }
+
+  const confirmedHint = localHint === undefined ? phoneHint : localHint;
 
   if (confirmedHint && !editing) {
     return (
@@ -49,6 +56,14 @@ export default function PhoneOptIn({ cardId, phoneHint }: PhoneOptInProps) {
           className="font-semibold text-ink underline underline-offset-2"
         >
           {t.phone.change}
+        </button>{" "}
+        <button
+          type="button"
+          onClick={handleRemove}
+          disabled={submitting}
+          className="font-semibold text-ink underline underline-offset-2 disabled:opacity-60"
+        >
+          {t.phone.remove}
         </button>
       </p>
     );

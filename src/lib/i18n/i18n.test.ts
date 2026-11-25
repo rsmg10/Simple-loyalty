@@ -65,7 +65,12 @@ describe("messages", () => {
   });
 
   it("renders Arabic signage copy with the correct plural", () => {
-    expect(messages.ar.signage.reward(9)).toBe("قهوة مجانية بعد 9 أختام");
-    expect(messages.ar.signage.reward(12)).toBe("قهوة مجانية بعد 12 ختمًا");
+    expect(messages.ar.signage.reward(9, "قهوة مجانية")).toBe("قهوة مجانية بعد 9 أختام");
+    expect(messages.ar.signage.reward(12, "حلوى مجانية")).toBe("حلوى مجانية بعد 12 ختمًا");
+  });
+
+  it("joins weekday lists naturally in both languages", () => {
+    expect(messages.en.listJoin(["Friday", "Saturday"])).toBe("Friday and Saturday");
+    expect(messages.ar.listJoin(["الجمعة", "السبت"])).toBe("الجمعة والسبت");
   });
 });

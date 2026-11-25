@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useI18n } from "./I18nProvider";
 import { slugify } from "@/lib/tenant";
 
 export default function CreateShopForm() {
+  const { locale, t } = useI18n();
   const [shopName, setShopName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
@@ -30,7 +32,8 @@ export default function CreateShopForm() {
 
     if (!res.ok) {
       setSubmitting(false);
-      setError(data.error ?? "Something went wrong.");
+      // Server messages are English-only; Arabic gets the generic message.
+      setError(locale === "en" && data.error ? data.error : t.ownerAuth.somethingWrong);
       return;
     }
 
@@ -42,9 +45,9 @@ export default function CreateShopForm() {
   return (
     <div className="w-full max-w-sm rounded-lg border border-hairline bg-canvas p-xl">
       <p className="text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted">
-        Set Up Your Shop
+        {t.ownerAuth.createShopEyebrow}
       </p>
-      <h1 className="mt-xxs text-display-sm font-medium tracking-display-sm text-ink">Create your shop</h1>
+      <h1 className="mt-xxs text-display-sm font-medium tracking-display-sm text-ink">{t.ownerAuth.createShopTitle}</h1>
 
       <form onSubmit={handleSubmit} className="mt-lg flex flex-col gap-sm">
         <input
@@ -53,7 +56,8 @@ export default function CreateShopForm() {
           autoFocus
           value={shopName}
           onChange={(event) => handleShopNameChange(event.target.value)}
-          placeholder="Shop name"
+          placeholder={t.ownerAuth.shopName}
+          aria-label={t.ownerAuth.shopName}
           className="h-11 w-full rounded-md border border-hairline bg-canvas px-md text-body-md text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink focus:ring-offset-2 focus:ring-offset-canvas"
         />
         <div>
@@ -65,11 +69,13 @@ export default function CreateShopForm() {
               setSlugTouched(true);
               setSlug(event.target.value.toLowerCase());
             }}
-            placeholder="subdomain"
+            dir="ltr"
+            placeholder={t.ownerAuth.subdomain}
+            aria-label={t.ownerAuth.subdomain}
             className="h-11 w-full rounded-md border border-hairline bg-canvas px-md text-body-md text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink focus:ring-offset-2 focus:ring-offset-canvas"
           />
           {slug && (
-            <p className="mt-xxs text-body-sm text-muted">
+            <p dir="ltr" className="mt-xxs text-start text-body-sm text-muted">
               {slug}.{process.env.NEXT_PUBLIC_APP_ROOT_DOMAIN}
             </p>
           )}
@@ -80,7 +86,8 @@ export default function CreateShopForm() {
           inputMode="numeric"
           value={staffPin}
           onChange={(event) => setStaffPin(event.target.value)}
-          placeholder="Staff PIN (min. 4 characters)"
+          placeholder={t.ownerAuth.managerPin}
+          aria-label={t.ownerAuth.managerPin}
           className="h-11 w-full rounded-md border border-hairline bg-canvas px-md text-body-md text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink focus:ring-offset-2 focus:ring-offset-canvas"
         />
         {error && (
@@ -93,7 +100,7 @@ export default function CreateShopForm() {
           disabled={submitting}
           className="h-11 w-full rounded-md bg-primary text-button font-semibold text-on-primary disabled:opacity-60"
         >
-          Create shop
+          {t.ownerAuth.createShop}
         </button>
       </form>
     </div>

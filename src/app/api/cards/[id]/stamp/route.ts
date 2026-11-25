@@ -1,19 +1,18 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { MAX_STAMPS_PER_PURCHASE, applyStamps, toCardJson } from "@/lib/card-json";
+import { stampCard } from "@/lib/card-actions";
+import { MAX_STAMPS_PER_PURCHASE } from "@/lib/card-json";
 import { sendStampReminderEmail } from "@/lib/email";
 import { updateGoogleWalletObject } from "@/lib/google-wallet";
 import { parseJsonBody } from "@/lib/parse-json-body";
-import { getShop } from "@/lib/shop-repo";
-import { STAFF_SESSION_COOKIE, verifyStaffSessionCookie } from "@/lib/staff-session";
+import { getStaffContext } from "@/lib/route-auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const shop = await getShop();
-  const sessionCookie = cookies().get(STAFF_SESSION_COOKIE)?.value;
-  if (!verifyStaffSessionCookie(sessionCookie, shop.id)) {
+  const context = await getStaffContext();
+  if (!context) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const { shop, staffMemberId } = context;
 
   // `count` is optional — no body means one stamp, as before.
   const body = await parseJsonBody<{ count?: unknown }>(request);
@@ -25,57 +24,37 @@ export async function POST(request: Request, { params }: { params: { id: string 
     );
   }
 
-  const supabase = getSupabaseAdmin();
-  const { data: existing, error: fetchError } = await supabase
-    .from("cards")
-    .select()
-    .eq("id", params.id)
-    .single();
-
-  if (fetchError || !existing) {
+  // Promotions, the reward rollover, the visit count and the log entry all
+  // happen atomically in the database (stamp_card, migration 0005). Cards
+  // from another shop come back "not found", same as a missing one.
+  const result = await stampCard(params.id, shop.id, count, staffMemberId);
+  if (!result.ok) {
     return NextResponse.json({ error: "Card not found" }, { status: 404 });
   }
-  // Staff can only stamp cards belonging to the shop they're signed into —
-  // matters once more than one shop exists behind the same deployment.
-  // Report the same "not found" a nonexistent card would, rather than
-  // confirming the card exists under a different shop.
-  if (existing.shop_id !== shop.id) {
-    return NextResponse.json({ error: "Card not found" }, { status: 404 });
-  }
+  const { card, eventId, bonus } = result;
 
-  const { stamps_earned, redemptions } = applyStamps(existing, count);
-
-  const { data: updated, error: updateError } = await supabase
-    .from("cards")
-    .update({
-      stamps_earned,
-      redemptions,
-      lifetime_stamps: existing.lifetime_stamps + count,
-      last_stamped_at: new Date().toISOString(),
-    })
-    .eq("id", params.id)
-    .select()
-    .single();
-
-  if (updateError || !updated) {
-    return NextResponse.json({ error: "Failed to add stamp" }, { status: 500 });
-  }
-
-  const stampsRemaining = updated.stamps_required - updated.stamps_earned;
-  if (stampsRemaining === 1 && updated.email) {
-    // Fire-and-forget so a slow/failed email send never delays the staff UI.
-    sendStampReminderEmail(updated.email, shop.name, stampsRemaining, updated.id).catch(() => {});
+  const stampsRemaining = card.stampsRequired - card.stampsEarned;
+  if (stampsRemaining === 1) {
+    // Fire-and-forget so a slow/failed email never delays the staff UI.
+    getSupabaseAdmin()
+      .from("cards")
+      .select("email")
+      .eq("id", card.id)
+      .single()
+      .then(({ data }) => {
+        if (data?.email) sendStampReminderEmail(data.email, shop.name, stampsRemaining, card.id).catch(() => {});
+      });
   }
 
   // Fire-and-forget — keeps any Google Wallet pass the customer already
   // added in sync. A no-op if Google Wallet isn't configured.
   updateGoogleWalletObject({
-    cardId: updated.id,
+    cardId: card.id,
     shopId: shop.id,
-    stampsEarned: updated.stamps_earned,
-    stampsRequired: updated.stamps_required,
+    stampsEarned: card.stampsEarned,
+    stampsRequired: card.stampsRequired,
     shopName: shop.name,
   }).catch(() => {});
 
-  return NextResponse.json(toCardJson(updated));
+  return NextResponse.json({ ...card, eventId, bonus });
 }

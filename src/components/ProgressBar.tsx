@@ -1,9 +1,10 @@
 type ProgressBarProps = {
   stampsEarned: number;
   stampsRequired: number;
+  color?: string | null;
 };
 
-export default function ProgressBar({ stampsEarned, stampsRequired }: ProgressBarProps) {
+export default function ProgressBar({ stampsEarned, stampsRequired, color }: ProgressBarProps) {
   const percent = Math.min(100, Math.round((stampsEarned / stampsRequired) * 100));
 
   return (
@@ -16,7 +17,7 @@ export default function ProgressBar({ stampsEarned, stampsRequired }: ProgressBa
     >
       <div
         className="h-full rounded-pill bg-primary transition-[width] duration-700 ease-out"
-        style={{ width: `${percent}%` }}
+        style={{ width: `${percent}%`, ...(color ? { backgroundColor: color } : {}) }}
       />
     </div>
   );

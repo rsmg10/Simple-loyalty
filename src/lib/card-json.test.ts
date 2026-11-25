@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyStamp, applyStamps, toCardJson } from "./card-json";
+import { applyStamp, applyStamps, maskEmail, toCardJson } from "./card-json";
 
 describe("applyStamp", () => {
   it("increments stamps without touching redemptions below the threshold", () => {
@@ -51,7 +51,46 @@ describe("applyStamps", () => {
   });
 });
 
+describe("rewardsAvailable", () => {
+  const base = { id: "c", shop_id: "s", stamps_earned: 0, stamps_required: 9, last_seen_redemptions: 0, email: null };
+
+  it("is rewards earned minus rewards handed over", () => {
+    expect(toCardJson({ ...base, redemptions: 3, rewards_used: 1 }).rewardsAvailable).toBe(2);
+  });
+
+  it("is zero for rows read before saved rewards existed", () => {
+    expect(toCardJson({ ...base, redemptions: 3 }).rewardsAvailable).toBe(0);
+  });
+});
+
+describe("maskEmail", () => {
+  it("keeps the first letter and the domain", () => {
+    expect(maskEmail("ahmed@gmail.com")).toBe("a•••@gmail.com");
+  });
+
+  it("handles malformed values without leaking them", () => {
+    expect(maskEmail("@gmail.com")).toBe("•••");
+    expect(maskEmail("nodomain")).toBe("•••");
+  });
+});
+
 describe("toCardJson", () => {
+  it("never returns the full email or phone number", () => {
+    const json = toCardJson({
+      id: "card-1",
+      shop_id: "shop-1",
+      stamps_earned: 0,
+      stamps_required: 9,
+      redemptions: 0,
+      last_seen_redemptions: 0,
+      email: "ahmed@gmail.com",
+      phone: "+218912345678",
+    });
+    expect(json).toMatchObject({ emailHint: "a•••@gmail.com", phoneHint: "••• 678" });
+    expect(JSON.stringify(json)).not.toContain("ahmed");
+    expect(JSON.stringify(json)).not.toContain("912345");
+  });
+
   it("maps snake_case DB columns to camelCase and normalizes a null email", () => {
     const json = toCardJson({
       id: "card-1",
@@ -68,8 +107,9 @@ describe("toCardJson", () => {
       stampsEarned: 2,
       stampsRequired: 9,
       redemptions: 0,
+      rewardsAvailable: 0,
       lastSeenRedemptions: 0,
-      email: undefined,
+      emailHint: undefined,
     });
   });
 });

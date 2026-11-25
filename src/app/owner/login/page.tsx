@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { useI18n } from "@/components/I18nProvider";
+import LanguageToggle from "@/components/LanguageToggle";
 import { postAuthRedirectPath } from "@/lib/owner-auth-config";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export default function OwnerLoginPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +25,7 @@ export default function OwnerLoginPage() {
 
     if (error) {
       setSubmitting(false);
-      setError("Incorrect email or password.");
+      setError(t.ownerAuth.wrongCredentials);
       return;
     }
 
@@ -31,12 +34,12 @@ export default function OwnerLoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-canvas p-lg py-xxl">
+    <main className="flex min-h-screen flex-col items-center justify-center gap-md bg-canvas p-lg py-xxl">
       <div className="w-full max-w-sm rounded-lg border border-hairline bg-canvas p-xl">
         <p className="text-caption-uppercase font-semibold uppercase tracking-caption-uppercase text-muted">
-          Owner Access
+          {t.ownerAuth.eyebrow}
         </p>
-        <h1 className="mt-xxs text-display-sm font-medium tracking-display-sm text-ink">Sign in</h1>
+        <h1 className="mt-xxs text-display-sm font-medium tracking-display-sm text-ink">{t.ownerAuth.signInTitle}</h1>
 
         <form onSubmit={handleSubmit} className="mt-lg flex flex-col gap-sm">
           <input
@@ -45,7 +48,9 @@ export default function OwnerLoginPage() {
             autoFocus
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="Email"
+            dir={email ? "ltr" : undefined}
+            placeholder={t.ownerAuth.email}
+            aria-label={t.ownerAuth.email}
             className="h-11 w-full rounded-md border border-hairline bg-canvas px-md text-body-md text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink focus:ring-offset-2 focus:ring-offset-canvas"
           />
           <input
@@ -53,7 +58,8 @@ export default function OwnerLoginPage() {
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            placeholder="Password"
+            placeholder={t.ownerAuth.password}
+            aria-label={t.ownerAuth.password}
             className="h-11 w-full rounded-md border border-hairline bg-canvas px-md text-body-md text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink focus:ring-offset-2 focus:ring-offset-canvas"
           />
           {error && (
@@ -66,17 +72,18 @@ export default function OwnerLoginPage() {
             disabled={submitting}
             className="h-11 w-full rounded-md bg-primary text-button font-semibold text-on-primary disabled:opacity-60"
           >
-            Sign in
+            {t.ownerAuth.signIn}
           </button>
         </form>
 
         <p className="mt-md text-center text-body-sm text-muted">
-          No account?{" "}
+          {t.ownerAuth.noAccount}{" "}
           <Link href="/owner/signup" className="font-semibold text-ink underline underline-offset-2">
-            Sign up
+            {t.ownerAuth.signUp}
           </Link>
         </p>
       </div>
+      <LanguageToggle />
     </main>
   );
 }

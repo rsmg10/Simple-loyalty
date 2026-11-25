@@ -5,9 +5,10 @@ import { useEffect, useRef, useState } from "react";
 type StampMarkProps = {
   filled: boolean;
   index: number;
+  color?: string | null; // the café's card colour; default ink
 };
 
-export default function StampMark({ filled, index }: StampMarkProps) {
+export default function StampMark({ filled, index, color }: StampMarkProps) {
   const [justFilled, setJustFilled] = useState(false);
   const prevFilled = useRef(filled);
   const mountedRef = useRef(false);
@@ -31,7 +32,11 @@ export default function StampMark({ filled, index }: StampMarkProps) {
         className={`aspect-square w-full animate-stamp-enter bg-primary ${
           justFilled ? "animate-stamp-pop" : ""
         }`}
-        style={{ ...entranceStyle, borderRadius: "42% 58% 63% 37% / 41% 44% 56% 59%" }}
+        style={{
+          ...entranceStyle,
+          borderRadius: "42% 58% 63% 37% / 41% 44% 56% 59%",
+          ...(color ? { backgroundColor: color } : {}),
+        }}
         aria-hidden="true"
       />
     );
